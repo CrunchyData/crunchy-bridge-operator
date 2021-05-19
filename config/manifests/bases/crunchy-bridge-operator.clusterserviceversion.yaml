@@ -1,0 +1,53 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: crunchy-bridge-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: BridgeCluster is the Schema for the bridgeclusters API
+      displayName: Bridge Cluster
+      kind: BridgeCluster
+      name: bridgeclusters.crunchybridge.crunchydata.com
+      version: v1
+  description: Operator managing PostgreSQL clusters provisioned withing Crunchy Bridge
+  displayName: Crunchy Bridge Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - relational
+  - hosted
+  - database
+  - sql
+  - postgresql
+  - postgres
+  links:
+  - name: Crunchy Bridge Operator
+    url: https://crunchy-bridge-operator.domain
+  maintainers:
+  - email: james.southard@crunchydata.com
+    name: James Southard
+  maturity: alpha
+  provider:
+    name: crunchy-bridge-operator
+    url: https://www.crunchydata.com
+  version: 0.0.0

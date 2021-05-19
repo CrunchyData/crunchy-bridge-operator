@@ -24,19 +24,22 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+# ORG defines the organization url used in the image repository
+ORG ?= example.org
+
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # crunchydata.com/crunchy-bridge-operator-bundle:$VERSION and crunchydata.com/crunchy-bridge-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= crunchydata.com/crunchy-bridge-operator
+IMAGE_TAG_BASE ?= quay.io/${ORG}/crunchy-bridge-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= $(IMAGE_TAG_BASE):latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -54,6 +57,10 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 all: build
+
+# TODO: Validate release target
+# .PHONY: release
+#release: build generate bundle docker-build docker-push bundle-build bundle-push catalog-build catalog-push
 
 ##@ General
 
@@ -120,6 +127,16 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+# TODO: Validate targets, perhaps include separately
+#
+#undeploy-olm:
+#	-oc delete subscriptions.operators.coreos.com crunchy-bridge-operator
+#	-oc delete operatorgroup crunchy-bridge-operator-group
+#	-oc delete clusterserviceversion crunchy-bridge-operator.v${VERSION}
+#
+#catalog-update:
+#	-oc delete catalogsource crunchy-bridge-operator -n openshift-marketplace
+#	oc apply -f config/samples/catalog-source.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

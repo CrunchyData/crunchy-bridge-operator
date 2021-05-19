@@ -1,0 +1,34 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeclusters/status
+  verbs:
+  - get
+  - patch
+  - update
