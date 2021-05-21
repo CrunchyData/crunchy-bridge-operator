@@ -59,8 +59,8 @@ SHELL = /usr/bin/env bash -o pipefail
 all: build
 
 # TODO: Validate release target
-# .PHONY: release
-#release: build generate bundle docker-build docker-push bundle-build bundle-push catalog-build catalog-push
+.PHONY: release
+release: build generate bundle docker-build docker-push bundle-build bundle-push catalog-build catalog-push
 
 ##@ General
 
@@ -127,16 +127,14 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-# TODO: Validate targets, perhaps include separately
-#
-#undeploy-olm:
-#	-oc delete subscriptions.operators.coreos.com crunchy-bridge-operator
-#	-oc delete operatorgroup crunchy-bridge-operator-group
-#	-oc delete clusterserviceversion crunchy-bridge-operator.v${VERSION}
-#
-#catalog-update:
-#	-oc delete catalogsource crunchy-bridge-operator -n openshift-marketplace
-#	oc apply -f config/samples/catalog-source.yaml
+undeploy-olm:
+	-oc delete subscriptions.operators.coreos.com crunchy-bridge-operator
+	-oc delete operatorgroup crunchy-bridge-operator-group
+	-oc delete clusterserviceversion crunchy-bridge-operator.v${VERSION}
+
+catalog-update:
+	-oc delete catalogsource crunchy-bridge-operator -n openshift-marketplace
+	oc apply -f config/samples/catalog-source.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
