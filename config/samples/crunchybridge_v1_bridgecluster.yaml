@@ -1,0 +1,7 @@
+apiVersion: crunchybridge.crunchydata.com/v1
+kind: BridgeCluster
+metadata:
+  name: bridgecluster-sample
+spec:
+  # Add fields here
+  foo: bar
