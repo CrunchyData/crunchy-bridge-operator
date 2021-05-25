@@ -16,4 +16,13 @@ resources:
   kind: BridgeCluster
   path: github.com/CrunchyData/crunchy-bridge-operator/api/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: crunchydata.com
+  group: crunchybridge
+  kind: BridgeService
+  path: github.com/CrunchyData/crunchy-bridge-operator/api/v1
+  version: v1
 version: "3"
