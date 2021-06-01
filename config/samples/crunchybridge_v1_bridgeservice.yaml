@@ -1,7 +1,0 @@
-apiVersion: crunchybridge.crunchydata.com/v1
-kind: BridgeService
-metadata:
-  name: bridgeservice-sample
-spec:
-  # Add fields here
-  foo: bar
