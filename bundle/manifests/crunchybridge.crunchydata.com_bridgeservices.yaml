@@ -4,20 +4,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: bridgeclusters.crunchybridge.crunchydata.com
+  name: bridgeservices.crunchybridge.crunchydata.com
 spec:
   group: crunchybridge.crunchydata.com
   names:
-    kind: BridgeCluster
-    listKind: BridgeClusterList
-    plural: bridgeclusters
-    singular: bridgecluster
+    kind: BridgeService
+    listKind: BridgeServiceList
+    plural: bridgeservices
+    singular: bridgeservice
   scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: BridgeCluster is the Schema for the bridgeclusters API
+        description: BridgeService is the Schema for the bridgeservices API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,15 +32,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: BridgeClusterSpec defines the desired state of BridgeCluster
+            description: BridgeServiceSpec defines the desired state of BridgeService
             properties:
               foo:
-                description: Foo is an example field of BridgeCluster. Edit bridgecluster_types.go
+                description: Foo is an example field of BridgeService. Edit bridgeservice_types.go
                   to remove/update
                 type: string
             type: object
           status:
-            description: BridgeClusterStatus defines the observed state of BridgeCluster
+            description: BridgeServiceStatus defines the observed state of BridgeService
             type: object
         type: object
     served: true

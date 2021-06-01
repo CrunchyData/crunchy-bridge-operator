@@ -15,6 +15,11 @@ spec:
       kind: BridgeCluster
       name: bridgeclusters.crunchybridge.crunchydata.com
       version: v1
+    - description: BridgeService is the Schema for the bridgeservices API
+      displayName: Bridge Service
+      kind: BridgeService
+      name: bridgeservices.crunchybridge.crunchydata.com
+      version: v1
   description: Operator managing PostgreSQL clusters provisioned withing Crunchy Bridge
   displayName: Crunchy Bridge Operator
   icon:
