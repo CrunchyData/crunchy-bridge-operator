@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Crunchy Data Solutions, Inc.
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,8 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	crunchybridgev1 "github.com/CrunchyData/crunchy-bridge-operator/api/v1"
-	"github.com/CrunchyData/crunchy-bridge-operator/controllers"
+	crunchybridgev1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1"
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	crunchybridgecontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/crunchybridge"
+	dbaasredhatcomcontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/dbaas.redhat.com"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,6 +47,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(crunchybridgev1.AddToScheme(scheme))
+	utilruntime.Must(dbaasredhatcomv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -78,12 +81,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.BridgeClusterReconciler{
+	if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("BridgeCluster"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
+		os.Exit(1)
+	}
+	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInventory")
+		os.Exit(1)
+	}
+	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeConnectionReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeConnection")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
