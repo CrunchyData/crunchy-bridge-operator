@@ -19,6 +19,8 @@ package dbaasredhatcom
 import (
 	"context"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +49,20 @@ type CrunchyBridgeInventoryReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx, "CrunchyBridgeInventory", req.NamespacedName)
 
-	// your logic here
+	var inventory dbaasredhatcomv1alpha1.CrunchyBridgeInventory
+	err := r.Get(ctx, req.NamespacedName, &inventory)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// CR deleted since request queued, child objects getting GC'd, no requeue
+			logger.Info("CrunchyBridgeInventory resource not found, has been deleted")
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Error fetching CrunchyBridgeInventory for reconcile")
+		return ctrl.Result{}, err
+	}
+	//
 
 	return ctrl.Result{}, nil
 }

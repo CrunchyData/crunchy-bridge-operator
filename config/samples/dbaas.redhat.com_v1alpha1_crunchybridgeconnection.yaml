@@ -3,5 +3,8 @@ kind: CrunchyBridgeConnection
 metadata:
   name: crunchybridgeconnection-sample
 spec:
-  # Add fields here
-  foo: bar
+  instanceID: hw4j2fw33zgb3mx5lpoiosj3va
+  inventory:
+    name: crunchybridgeinventory-sample
+
+

@@ -1,0 +1,9 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: crunchy-bridge-operator
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: quay.io/<ORG>/crunchy-bridge-operator-catalog:v0.0.1
+  displayName: Crunchy Bridge Operator

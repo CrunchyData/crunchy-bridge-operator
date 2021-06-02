@@ -3,5 +3,8 @@ kind: CrunchyBridgeInventory
 metadata:
   name: crunchybridgeinventory-sample
 spec:
-  # Add fields here
-  foo: bar
+  provider:
+    name: Crunchy Bridge Postgres
+  credentialsRef:
+    name: crunchy-bridge-api-key
+    namespace: crunchy-bridge-operator-system
