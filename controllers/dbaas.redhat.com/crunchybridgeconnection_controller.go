@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Crunchy Data Solutions, Inc.
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,41 +14,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package dbaasredhatcom
 
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	crunchybridgev1 "github.com/CrunchyData/crunchy-bridge-operator/api/v1"
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 )
 
-// BridgeClusterReconciler reconciles a BridgeCluster object
-type BridgeClusterReconciler struct {
+// CrunchyBridgeConnectionReconciler reconciles a CrunchyBridgeConnection object
+type CrunchyBridgeConnectionReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=crunchybridge.crunchydata.com,resources=bridgeclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=crunchybridge.crunchydata.com,resources=bridgeclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=crunchybridge.crunchydata.com,resources=bridgeclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeconnections,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeconnections/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeconnections/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the BridgeCluster object against the actual cluster state, and then
+// the CrunchyBridgeConnection object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
-func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("bridgecluster", req.NamespacedName)
+func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = log.FromContext(ctx)
 
 	// your logic here
 
@@ -56,8 +55,8 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *BridgeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *CrunchyBridgeConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&crunchybridgev1.BridgeCluster{}).
+		For(&dbaasredhatcomv1alpha1.CrunchyBridgeConnection{}).
 		Complete(r)
 }

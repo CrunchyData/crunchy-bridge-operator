@@ -32,3 +32,55 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeconnections
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeconnections/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeconnections/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinventories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinventories/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinventories/status
+  verbs:
+  - get
+  - patch
+  - update

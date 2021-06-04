@@ -1,0 +1,10 @@
+apiVersion: dbaas.redhat.com/v1alpha1
+kind: CrunchyBridgeInventory
+metadata:
+  name: crunchybridgeinventory-sample
+spec:
+  provider:
+    name: Crunchy Bridge Postgres
+  credentialsRef:
+    name: crunchy-bridge-api-key
+    namespace: crunchy-bridge-operator-system

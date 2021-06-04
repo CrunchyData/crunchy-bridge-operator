@@ -1,0 +1,24 @@
+# permissions for end users to edit crunchybridgeconnections.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crunchybridgeconnection-editor-role
+rules:
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeconnections
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeconnections/status
+  verbs:
+  - get

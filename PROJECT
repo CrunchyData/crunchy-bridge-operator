@@ -1,6 +1,7 @@
 domain: crunchydata.com
 layout:
 - go.kubebuilder.io/v3
+multigroup: true
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
@@ -14,6 +15,24 @@ resources:
   domain: crunchydata.com
   group: crunchybridge
   kind: BridgeCluster
-  path: github.com/CrunchyData/crunchy-bridge-operator/api/v1
+  path: github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: crunchydata.com
+  group: dbaas.redhat.com
+  kind: CrunchyBridgeInventory
+  path: github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: crunchydata.com
+  group: dbaas.redhat.com
+  kind: CrunchyBridgeConnection
+  path: github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1
+  version: v1alpha1
 version: "3"

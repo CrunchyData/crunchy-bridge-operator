@@ -1,0 +1,10 @@
+apiVersion: dbaas.redhat.com/v1alpha1
+kind: CrunchyBridgeConnection
+metadata:
+  name: crunchybridgeconnection-sample
+spec:
+  instanceID: hw4j2fw33zgb3mx5lpoiosj3va
+  inventory:
+    name: crunchybridgeinventory-sample
+
+
