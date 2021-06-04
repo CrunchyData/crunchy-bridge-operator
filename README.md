@@ -31,3 +31,20 @@
 - **Next edit the [catalog-source.yaml](config/samples/catalog-source.yaml) template to indicate your new Quay.io org image**  
 - `make release catalog-update`
 - search the Crunchy Bridge Operator in OperatorHub, click on install.
+
+## Enable DBaaS Integration
+
+Follow the steps below to enable integration with DBaaS.
+
+Note: you need  Application ID and Application Secret, for creating a secret. See more, [API Reference](https://docs.crunchybridge.com/api/getting_started)
+
+1. Create a Secret :
+```
+kubectl create secret generic crunchy-bridge-api-key  --from-literal="publicApiKey=<Application ID>"   --from-literal="privateApiSecret=<Application Secret>"   -n crunchy-bridge-operator-system
+```
+2. Create a `CrunchyBridgeInventory` Custom Resource
+```
+kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeinventory.yaml
+```
+
+

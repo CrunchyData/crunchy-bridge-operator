@@ -37,9 +37,6 @@ metadata:
             "credentialsRef": {
               "name": "crunchy-bridge-api-key",
               "namespace": "crunchy-bridge-operator-system"
-            },
-            "provider": {
-              "name": "Crunchy Bridge Postgres"
             }
           }
         }

@@ -18,6 +18,7 @@ package dbaasredhatcom
 
 import (
 	"context"
+	"github.com/CrunchyData/crunchy-bridge-operator/controllers/resources"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -62,8 +63,16 @@ func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ct
 		logger.Error(err, "Error fetching CrunchyBridgeInventory for reconcile")
 		return ctrl.Result{}, err
 	}
-	//
 
+	// read the API Key from secret
+	connectionAPIKeys, err := resources.ReadAPIKeysFromSecret(r.Client, ctx, &inventory)
+	if err != nil {
+		// error fetching connectionAPIKeys
+		logger.Error(err, "error fetching matching Secret")
+		return ctrl.Result{}, err
+	}
+	//TODO need to remove from logs once utiliaze the connectionAPIKeys
+	logger.Info("CrunchyBridgeInventory ", "connectionAPIKeys", connectionAPIKeys)
 	return ctrl.Result{}, nil
 }
 
