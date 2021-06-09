@@ -15,8 +15,17 @@ resources:
   domain: crunchydata.com
   group: crunchybridge
   kind: BridgeCluster
-  path: github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1
-  version: v1
+  path: github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: crunchydata.com
+  group: crunchybridge
+  kind: DatabaseRole
+  path: github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1
+  version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true

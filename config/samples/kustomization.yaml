@@ -1,6 +1,7 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- crunchybridge_v1_bridgecluster.yaml
+- crunchybridge_v1alpha1_bridgecluster.yaml
+- crunchybridge_v1alpha1_databaserole.yaml
 - dbaas.redhat.com_v1alpha1_crunchybridgeinventory.yaml
 - dbaas.redhat.com_v1alpha1_crunchybridgeconnection.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

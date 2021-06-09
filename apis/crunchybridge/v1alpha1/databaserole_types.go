@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,17 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// BridgeClusterSpec defines the desired state of BridgeCluster
-type BridgeClusterSpec struct {
+// DatabaseRoleSpec defines the desired state of DatabaseRole
+type DatabaseRoleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of BridgeCluster. Edit bridgecluster_types.go to remove/update
+	// Foo is an example field of DatabaseRole. Edit databaserole_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// BridgeClusterStatus defines the observed state of BridgeCluster
-type BridgeClusterStatus struct {
+// DatabaseRoleStatus defines the observed state of DatabaseRole
+type DatabaseRoleStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -41,24 +41,24 @@ type BridgeClusterStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// BridgeCluster is the Schema for the bridgeclusters API
-type BridgeCluster struct {
+// DatabaseRole is the Schema for the databaseroles API
+type DatabaseRole struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BridgeClusterSpec   `json:"spec,omitempty"`
-	Status BridgeClusterStatus `json:"status,omitempty"`
+	Spec   DatabaseRoleSpec   `json:"spec,omitempty"`
+	Status DatabaseRoleStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// BridgeClusterList contains a list of BridgeCluster
-type BridgeClusterList struct {
+// DatabaseRoleList contains a list of DatabaseRole
+type DatabaseRoleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []BridgeCluster `json:"items"`
+	Items           []DatabaseRole `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&BridgeCluster{}, &BridgeClusterList{})
+	SchemeBuilder.Register(&DatabaseRole{}, &DatabaseRoleList{})
 }

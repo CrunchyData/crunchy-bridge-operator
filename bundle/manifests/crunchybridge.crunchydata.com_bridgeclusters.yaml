@@ -14,7 +14,7 @@ spec:
     singular: bridgecluster
   scope: Namespaced
   versions:
-  - name: v1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: BridgeCluster is the Schema for the bridgeclusters API

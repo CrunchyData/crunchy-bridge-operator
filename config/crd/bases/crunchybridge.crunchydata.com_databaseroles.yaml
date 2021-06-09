@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: bridgeclusters.crunchybridge.crunchydata.com
+  name: databaseroles.crunchybridge.crunchydata.com
 spec:
   group: crunchybridge.crunchydata.com
   names:
-    kind: BridgeCluster
-    listKind: BridgeClusterList
-    plural: bridgeclusters
-    singular: bridgecluster
+    kind: DatabaseRole
+    listKind: DatabaseRoleList
+    plural: databaseroles
+    singular: databaserole
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: BridgeCluster is the Schema for the bridgeclusters API
+        description: DatabaseRole is the Schema for the databaseroles API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,15 +34,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: BridgeClusterSpec defines the desired state of BridgeCluster
+            description: DatabaseRoleSpec defines the desired state of DatabaseRole
             properties:
               foo:
-                description: Foo is an example field of BridgeCluster. Edit bridgecluster_types.go
+                description: Foo is an example field of DatabaseRole. Edit databaserole_types.go
                   to remove/update
                 type: string
             type: object
           status:
-            description: BridgeClusterStatus defines the observed state of BridgeCluster
+            description: DatabaseRoleStatus defines the observed state of DatabaseRole
             type: object
         type: object
     served: true
