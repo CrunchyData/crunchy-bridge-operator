@@ -25,17 +25,34 @@ import (
 
 // DatabaseRoleSpec defines the desired state of DatabaseRole
 type DatabaseRoleSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of DatabaseRole. Edit databaserole_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ClusterID identifies the cluster on which this role exists
+	ClusterID string `json:"cluster_id"`
+	// RoleName (OPTIONAL) identifies the requested role name, defaults to
+	// a system-generated name if not provided
+	RoleName string `json:"role_name"`
 }
 
 // DatabaseRoleStatus defines the observed state of DatabaseRole
 type DatabaseRoleStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Phase represents the creation state of the request
+	Phase string `json:"phase"`
+	// Created represents the creation time for the role
+	// TODO: Can this be moved to time.Time?
+	Created string `json:"created_at"`
+	// RoleName represents the role provisioned for this request
+	RoleName string `json:"role_name"`
+	// CredentialRef represents the secret associated with this role
+	CredentialRef NamespacedName `json:"credential_ref"`
+}
+
+// Namespaced name is a light representation of a name in a namespace
+type NamespacedName struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
 }
 
 //+kubebuilder:object:root=true
