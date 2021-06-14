@@ -5,10 +5,20 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "crunchybridge.crunchydata.com/v1",
+          "apiVersion": "crunchybridge.crunchydata.com/v1alpha1",
           "kind": "BridgeCluster",
           "metadata": {
             "name": "bridgecluster-sample"
+          },
+          "spec": {
+            "foo": "bar"
+          }
+        },
+        {
+          "apiVersion": "crunchybridge.crunchydata.com/v1alpha1",
+          "kind": "DatabaseRole",
+          "metadata": {
+            "name": "databaserole-sample"
           },
           "spec": {
             "foo": "bar"
@@ -57,12 +67,17 @@ spec:
       displayName: Bridge Cluster
       kind: BridgeCluster
       name: bridgeclusters.crunchybridge.crunchydata.com
-      version: v1
+      version: v1alpha1
     - kind: CrunchyBridgeConnection
       name: crunchybridgeconnections.dbaas.redhat.com
       version: v1alpha1
     - kind: CrunchyBridgeInventory
       name: crunchybridgeinventories.dbaas.redhat.com
+      version: v1alpha1
+    - description: DatabaseRole is the Schema for the databaseroles API
+      displayName: Database Role
+      kind: DatabaseRole
+      name: databaseroles.crunchybridge.crunchydata.com
       version: v1alpha1
   description: Operator managing PostgreSQL clusters provisioned with Crunchy Bridge
   displayName: Crunchy Bridge Operator
@@ -95,6 +110,32 @@ spec:
           - crunchybridge.crunchydata.com
           resources:
           - bridgeclusters/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - crunchybridge.crunchydata.com
+          resources:
+          - databaseroles
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - crunchybridge.crunchydata.com
+          resources:
+          - databaseroles/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - crunchybridge.crunchydata.com
+          resources:
+          - databaseroles/status
           verbs:
           - get
           - patch
