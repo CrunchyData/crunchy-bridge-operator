@@ -20,14 +20,44 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/go-logr/logr"
+)
+
+var (
+	routeClusters    string = "/clusters"
+	routeDefaultRole string = "/clusters/%s/roles/default"
 )
 
 // Leave open configuration for eventual-consistency scenario
 type Client struct {
 	APITarget *url.URL
+	Log       logr.Logger
+	client    *http.Client
+}
+
+// NewClient returns a client initialized with the package logger as the
+// default logger and an uninitialized APITarget for late binding
+func NewClient() *Client {
+	client := &Client{
+		Log: pkgLog,
+	}
+	return client
+}
+
+func (c *Client) precheck() error {
+	if c.APITarget == nil {
+		return ErrorAPIUnset
+	}
+
+	// Lazy initialization
+	if c.client == nil {
+		c.client = &http.Client{}
+	}
+
+	return nil
 }
 
 // helper to set up auth with current bearer token
@@ -36,8 +66,8 @@ func setBearer(req *http.Request) {
 }
 
 func (c *Client) CreateCluster(cr CreateRequest) error {
-	if c.APITarget == nil {
-		return ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return err
 	}
 	// TODO: Identify personal team id if not provided in request
 
@@ -45,15 +75,14 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 	json.NewEncoder(reqPayload).Encode(cr)
 	req, err := http.NewRequest(http.MethodPost, c.APITarget.String()+routeClusters, reqPayload)
 	if err != nil {
-		pkgLog.Error(err, "during create cluster request")
+		c.Log.Error(err, "during create cluster request")
 		return err
 	}
 	setBearer(req)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		pkgLog.Error(err, "during create cluster")
+		c.Log.Error(err, "during create cluster")
 		return err
 	}
 	defer resp.Body.Close()
@@ -66,7 +95,7 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 	case http.StatusConflict:
 		return ErrorConflict
 	default:
-		pkgLog.Info("unrecognized return status from create call: %d", resp.StatusCode)
+		c.Log.Info("unrecognized return status from create call", "statusCode", resp.StatusCode)
 		return nil
 	}
 }
@@ -79,8 +108,8 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 //
 // Returns a zero-value ClusterDetail and nil error when not found
 func (c *Client) ClusterByName(name string) (ClusterDetail, error) {
-	if c.APITarget == nil {
-		return ClusterDetail{}, ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return ClusterDetail{}, err
 	}
 
 	// TODO: switch to ListAll when implemented
@@ -98,136 +127,180 @@ func (c *Client) ClusterByName(name string) (ClusterDetail, error) {
 }
 
 func (c *Client) ListClusters() (ClusterList, error) {
-	if c.APITarget == nil {
-		return ClusterList{}, ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return ClusterList{}, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeClusters, nil)
 	if err != nil {
-		pkgLog.Error(err, "during list personal clusters request")
+		c.Log.Error(err, "during list personal clusters request prep")
 		return ClusterList{}, err
 	}
 	setBearer(req)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		pkgLog.Error(err, "during personal cluster list request prep")
+		c.Log.Error(err, "during personal cluster list request")
 		return ClusterList{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		pkgLog.Info("unexpected status code from API: %d", resp.StatusCode)
+		c.Log.Info("unexpected status code from API (cluster list)", "statusCode", resp.StatusCode)
 		return ClusterList{}, errors.New("unexpected response status from API")
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		pkgLog.Error(err, "error reading response body")
-		return ClusterList{}, err
-	}
-
 	var myList ClusterList
-	err = json.Unmarshal(body, &myList)
+	err = json.NewDecoder(resp.Body).Decode(&myList)
 	if err != nil {
-		pkgLog.Error(err, "error unmarshaling response body")
+		c.Log.Error(err, "error unmarshaling response body for cluster list")
 		return ClusterList{}, err
 	}
 	return myList, nil
 }
 
 func (c *Client) ListTeamClusters(teamID string) (ClusterList, error) {
-	if c.APITarget == nil {
-		return ClusterList{}, ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return ClusterList{}, err
 	}
 
-	return ClusterList{}, errors.New("stub, unimplemented")
+	reqURL := fmt.Sprintf("%s%s?team_id=%s", c.APITarget, routeClusters, teamID)
+
+	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+	if err != nil {
+		c.Log.Error(err, "during list team clusters request prep")
+		return ClusterList{}, err
+	}
+	setBearer(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		c.Log.Error(err, "during team cluster list request")
+		return ClusterList{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.Log.Info("unexpected status code from API (team cluster list)", "statusCode", resp.StatusCode)
+		return ClusterList{}, errors.New("unexpected response status from API")
+	}
+
+	var teamList ClusterList
+	err = json.NewDecoder(resp.Body).Decode(&teamList)
+	if err != nil {
+		c.Log.Error(err, "error unmarshaling response body for cluster list")
+		return ClusterList{}, err
+	}
+	return teamList, nil
 }
 
 // ListAllClusters returns all clusters visible to the user, including both
 // personal clusters and team visibility
 func (c *Client) ListAllClusters() (ClusterList, error) {
-	if c.APITarget == nil {
-		return ClusterList{}, ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return ClusterList{}, err
 	}
 
 	return ClusterList{}, errors.New("stub, unimplemented")
 }
 
-// // Unknown at this point whether it will require a separate query or come
-// //  across as part of ClusterDetail
-// func (c *Client) SuperuserCredentials(id string) (u, p string) {
+// DefaultConnRole returns the default connection role for the cluster
+// identified by id
+func (c *Client) DefaultConnRole(id string) (ConnectionRole, error) {
+	if err := c.precheck(); err != nil {
+		return ConnectionRole{}, err
+	}
 
-// }
+	route := fmt.Sprintf(c.APITarget.String()+routeDefaultRole, id)
+
+	req, err := http.NewRequest(http.MethodGet, route, nil)
+	if err != nil {
+		c.Log.Error(err, "during cluster role request prep")
+		return ConnectionRole{}, err
+	}
+	setBearer(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		c.Log.Error(err, "during cluster role request")
+		return ConnectionRole{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.Log.Info("unexpected status code from API(cluster role)", "statusCode", resp.StatusCode)
+		return ConnectionRole{}, errors.New("unexpected response status from API")
+	}
+
+	var role ConnectionRole
+	err = json.NewDecoder(resp.Body).Decode(&role)
+	if err != nil {
+		c.Log.Error(err, "error unmarshaling response body (cluster role)")
+		return ConnectionRole{}, err
+	}
+
+	return role, nil
+}
 
 func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
-	if c.APITarget == nil {
-		return ClusterDetail{}, ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return ClusterDetail{}, err
 	}
 
 	route := fmt.Sprintf("%s%s/%s", c.APITarget, routeClusters, id)
 
 	req, err := http.NewRequest(http.MethodGet, route, nil)
 	if err != nil {
-		pkgLog.Error(err, "during cluster detail request")
+		c.Log.Error(err, "during cluster detail request")
 		return ClusterDetail{}, err
 	}
 	setBearer(req)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		pkgLog.Error(err, "during cluster detail request prep")
+		c.Log.Error(err, "during cluster detail request prep")
 		return ClusterDetail{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		pkgLog.Info("unexpected status code from API(cluster detail): %d", resp.StatusCode)
+		c.Log.Info("unexpected status code from API(cluster detail)", "statusCode", resp.StatusCode)
 		return ClusterDetail{}, errors.New("unexpected response status from API")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		pkgLog.Error(err, "error reading response body (cluster detail)")
-		return ClusterDetail{}, err
 	}
 
 	var detail struct {
 		Cluster ClusterDetail
 	}
-	err = json.Unmarshal(body, &detail)
+	err = json.NewDecoder(resp.Body).Decode(&detail)
 	if err != nil {
-		pkgLog.Error(err, "error unmarshaling response body (cluster detail)")
+		c.Log.Error(err, "error unmarshaling response body (cluster detail)")
 		return ClusterDetail{}, err
 	}
 	return detail.Cluster, nil
 }
 
 func (c *Client) DeleteCluster(id string) error {
-	if c.APITarget == nil {
-		return ErrorAPIUnset
+	if err := c.precheck(); err != nil {
+		return err
 	}
 
 	route := fmt.Sprintf("%s%s/%s", c.APITarget, routeClusters, id)
 
 	req, err := http.NewRequest(http.MethodDelete, route, nil)
 	if err != nil {
-		pkgLog.Error(err, "during cluster delete request")
+		c.Log.Error(err, "during cluster delete request")
 		return err
 	}
 	setBearer(req)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		pkgLog.Error(err, "during cluster delete request prep")
+		c.Log.Error(err, "during cluster delete request prep")
 		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		pkgLog.Info("unexpected status code from API(cluster delete): %d", resp.StatusCode)
+		c.Log.Info("unexpected status code from API(cluster delete)", "statusCode", resp.StatusCode)
 		return errors.New("unexpected response status from API")
 	}
 

@@ -30,6 +30,7 @@ const (
 	refreshBuffer = 5
 )
 
+// TODO: move login manager from package global to client internal
 var primaryLogin *loginManager
 
 type loginManager struct {

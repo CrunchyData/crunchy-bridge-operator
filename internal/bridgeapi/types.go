@@ -26,10 +26,6 @@ var (
 	ErrorAPIUnset   = errors.New("No API target URL set")
 )
 
-var (
-	routeClusters string = "/clusters"
-)
-
 type ClusterState string
 
 const (
@@ -80,4 +76,10 @@ type InstanceDetail struct {
 	RegionID   string `json:"region_id"`
 	Type       string `json:"type"` // primary, read_replica
 	URL        string `json:"url"`
+}
+
+type ConnectionRole struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+	URI      string `json:"uri"`
 }
