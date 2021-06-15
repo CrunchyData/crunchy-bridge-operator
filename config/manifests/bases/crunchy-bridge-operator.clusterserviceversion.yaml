@@ -15,6 +15,16 @@ spec:
       kind: BridgeCluster
       name: bridgeclusters.crunchybridge.crunchydata.com
       version: v1
+    - description: BridgeCluster is the Schema for the bridgeclusters API
+      displayName: Bridge Cluster
+      kind: BridgeCluster
+      name: bridgeclusters.crunchybridge.crunchydata.com
+      version: v1alpha1
+    - description: DatabaseRole is the Schema for the databaseroles API
+      displayName: Database Role
+      kind: DatabaseRole
+      name: databaseroles.crunchybridge.crunchydata.com
+      version: v1alpha1
   description: Operator managing PostgreSQL clusters provisioned with Crunchy Bridge
   displayName: Crunchy Bridge Operator
   icon:

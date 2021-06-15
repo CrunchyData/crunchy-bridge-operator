@@ -33,6 +33,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - databaseroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - databaseroles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - databaseroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - dbaas.redhat.com
   resources:
   - crunchybridgeconnections

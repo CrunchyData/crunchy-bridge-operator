@@ -1,4 +1,4 @@
-apiVersion: crunchybridge.crunchydata.com/v1
+apiVersion: crunchybridge.crunchydata.com/v1alpha1
 kind: BridgeCluster
 metadata:
   name: bridgecluster-sample
