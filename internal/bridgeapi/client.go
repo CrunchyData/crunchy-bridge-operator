@@ -29,6 +29,7 @@ import (
 var (
 	routeClusters    string = "/clusters"
 	routeDefaultRole string = "/clusters/%s/roles/default"
+	routeTeams       string = "/teams"
 )
 
 // Leave open configuration for eventual-consistency scenario
@@ -112,8 +113,7 @@ func (c *Client) ClusterByName(name string) (ClusterDetail, error) {
 		return ClusterDetail{}, err
 	}
 
-	// TODO: switch to ListAll when implemented
-	clustList, err := c.ListClusters()
+	clustList, err := c.ListAllClusters()
 	if err != nil {
 		return ClusterDetail{}, err
 	}
@@ -201,7 +201,56 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 		return ClusterList{}, err
 	}
 
-	return ClusterList{}, errors.New("stub, unimplemented")
+	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeTeams, nil)
+	if err != nil {
+		c.Log.Error(err, "during list teams prep")
+		return ClusterList{}, err
+	}
+	setBearer(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		c.Log.Error(err, "during list teams")
+		return ClusterList{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.Log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		return ClusterList{}, errors.New("unexpected response status from API")
+	}
+
+	var teamList struct {
+		Teams []struct {
+			ID string `json:"id"`
+		}
+	}
+	err = json.NewDecoder(resp.Body).Decode(&teamList)
+	if err != nil && teamList.Teams != nil {
+		c.Log.Error(err, "error unmarshaling response body for team list")
+		return ClusterList{}, err
+	}
+
+	allClusters := ClusterList{
+		Clusters: []ClusterDetail{},
+	}
+	for _, team := range teamList.Teams {
+		toAdd, err := c.ListTeamClusters(team.ID)
+		if err != nil {
+			return ClusterList{}, err
+		}
+		allClusters.Clusters = append(allClusters.Clusters, toAdd.Clusters...)
+		allClusters.Count += toAdd.Count
+	}
+	// At the time of this code, the team order is sorted by personal, then
+	// other teams and by team name
+	// Clusters are sorted by cluster name, so the result of this combination
+	// remains stable without needing a local sort on allClusters.Clusters
+	//
+	// That is, the result items' order will remain stable for comparison
+	// purposes unless the underlying DB queries remove the sort ordering
+
+	return allClusters, nil
 }
 
 // DefaultConnRole returns the default connection role for the cluster

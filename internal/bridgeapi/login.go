@@ -17,7 +17,6 @@ package bridgeapi
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync"
@@ -68,16 +67,10 @@ func (lm *loginManager) login() {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		pkgLog.Error(err, "error reading response body")
-		return
-	}
-
 	var tr tokenResponse
-	err = json.Unmarshal(body, &tr)
+	err = json.NewDecoder(resp.Body).Decode(&tr)
 	if err != nil {
-		pkgLog.Error(err, "error unmarshaling response body")
+		pkgLog.Error(err, "error unmarshaling token response body")
 		return
 	}
 
