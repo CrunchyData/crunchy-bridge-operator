@@ -18,21 +18,24 @@ package dbaasredhatcom
 
 import (
 	"context"
-
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"net/url"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 )
 
 // CrunchyBridgeInventoryReconciler reconciles a CrunchyBridgeInventory object
 type CrunchyBridgeInventoryReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme     *runtime.Scheme
+	APIBaseURL string
 }
 
 //+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeinventories,verbs=get;list;watch;create;update;patch;delete
@@ -62,9 +65,69 @@ func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ct
 		logger.Error(err, "Error fetching CrunchyBridgeInventory for reconcile")
 		return ctrl.Result{}, err
 	}
-	//
 
+	bridgeapiClient, err := r.setupClient(inventory, logger)
+	if err != nil {
+		statusErr := r.updateStatus(ctx, inventory, metav1.ConditionFalse, BackendError, err.Error())
+		if statusErr != nil {
+			logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
+			return ctrl.Result{Requeue: true}, statusErr
+		}
+		logger.Error(err, "Error while setting up CrunchyBridge Client")
+		return ctrl.Result{}, err
+	}
+	logger.Info("Crunchy Bridge Client Configured ")
+	err = r.discoverInventories(&inventory, bridgeapiClient, logger)
+	if err != nil {
+		statusErr := r.updateStatus(ctx, inventory, metav1.ConditionFalse, BackendError, err.Error())
+		if statusErr != nil {
+			logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
+			return ctrl.Result{Requeue: true}, statusErr
+		}
+		logger.Error(err, "Error while querying the inventory from CrunchyBridge")
+		return ctrl.Result{}, err
+	}
+	statusErr := r.updateStatus(ctx, inventory, metav1.ConditionTrue, SyncOK, SuccessMessage)
+	if statusErr != nil {
+		logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
+		return ctrl.Result{Requeue: true}, statusErr
+	}
 	return ctrl.Result{}, nil
+}
+
+// setupClient
+func (r *CrunchyBridgeInventoryReconciler) setupClient(inventory dbaasredhatcomv1alpha1.CrunchyBridgeInventory, logger logr.Logger) (*bridgeapi.Client, error) {
+	baseUrl, err := url.Parse(r.APIBaseURL)
+	if err != nil {
+		logger.Error(err, "Malformed URL", "URL", r.APIBaseURL)
+		return nil, err
+	}
+	KubeSecretCredentialProvider := &kubeadapter.KubeSecretCredentialProvider{
+		Client:      r.Client,
+		Namespace:   inventory.Spec.CredentialsRef.Namespace,
+		Name:        inventory.Spec.CredentialsRef.Name,
+		KeyField:    "publicApiKey",
+		SecretField: "privateApiSecret",
+	}
+	err = bridgeapi.SetLogin(KubeSecretCredentialProvider, baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	bridgeapiClient := &bridgeapi.Client{
+		APITarget: baseUrl,
+		Log:       logger,
+	}
+	return bridgeapiClient, nil
+}
+
+// updateStatus
+func (r *CrunchyBridgeInventoryReconciler) updateStatus(ctx context.Context, inventory dbaasredhatcomv1alpha1.CrunchyBridgeInventory, conidtionStatus metav1.ConditionStatus, reason, message string) error {
+	setStatusCondition(&inventory, SpecSynced, conidtionStatus, reason, message)
+	if err := r.Status().Update(ctx, &inventory); err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
