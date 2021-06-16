@@ -55,6 +55,8 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var crunchybridgeAPIURL string
+	flag.StringVar(&crunchybridgeAPIURL, "crunchybridgeapi-url", "https://api.crunchybridge.com", "the Crunchy bridge API URL (no slash in the end).")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -96,8 +98,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: crunchybridgeAPIURL,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInventory")
 		os.Exit(1)

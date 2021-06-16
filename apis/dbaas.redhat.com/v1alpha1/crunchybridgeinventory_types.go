@@ -48,3 +48,9 @@ type CrunchyBridgeInventoryList struct {
 func init() {
 	SchemeBuilder.Register(&CrunchyBridgeInventory{}, &CrunchyBridgeInventoryList{})
 }
+
+// GetStatusConditions gets the status conditions from the
+// ApplicationGroup status
+func (in *CrunchyBridgeInventory) GetStatusConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
+}
