@@ -31,7 +31,7 @@ metadata:
             "name": "crunchybridgeconnection-sample"
           },
           "spec": {
-            "instanceID": "hw4j2fw33zgb3mx5lpoiosj3va",
+            "instanceID": "na7wuu36f5f67oaxm75ngjl5pe",
             "inventory": {
               "name": "crunchybridgeinventory-sample"
             }
@@ -47,9 +47,6 @@ metadata:
             "credentialsRef": {
               "name": "crunchy-bridge-api-key",
               "namespace": "crunchy-bridge-operator-system"
-            },
-            "provider": {
-              "name": "Crunchy Bridge Postgres"
             }
           }
         }

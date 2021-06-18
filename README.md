@@ -32,11 +32,9 @@
 - `make release catalog-update`
 - search the Crunchy Bridge Operator in OperatorHub, click on install.
 
-## DBaaS Integration
+## Testing the Inventory and Connection CRs  
 
-Follow the steps below to enable integration with DBaaS.
-
-Note: you need  Application ID and Application Secret, for creating a secret. See more, [API Reference](https://docs.crunchybridge.com/api/getting_started)
+Note: you need Application ID and Application Secret, for creating a secret. See more, [API Reference](https://docs.crunchybridge.com/api/getting_started)
 
 1. Create a Secret :
 ```
@@ -46,11 +44,40 @@ kubectl create secret generic crunchy-bridge-api-key  --from-literal="publicApiK
 ```
 kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeinventory.yaml
 ```
-3. Create a `CrunchyBridgeConnection` Custom Resource
+The CRs status will be updated with list of clusters.
+
+example: 
+```
+Instances:
+    Extra Info:
+      Cpu:            1
+      created_at:     2021-04-01 19:36:19.937782 +0000 UTC
+      is_ha:          false
+      major_version:  13
+      Memory:         2
+      provider_id:    aws
+      region_id:      us-east-1
+      Storage:        100
+      team_id:        vp6hlxjcl5g73furjiztcrr2vi
+      updated_at:     2021-06-04 21:30:57.53937 +0000 UTC
+    Instance ID:      475ow3natngrhaffymv7fbxmha
+    Name:             sampledatabasse
+
+```
+3. Get cluster instance ID from Step 2 CR status and specify a cluster instance ID in `CrunchyBridgeConnection` Custom Resource and run the below command.
   ```
   kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeconnection.yaml
  ``` 
+The CRs status will be updated with connection details of specified instance ID.
 
+example:
+```
+connectionInfo:
+instanceId: na7wuu36f5f67oaxm75ngjl5pe
+connectionString: >-postgres://@p<url>:<>/postgres
+credentialsRef:
+name: crunchy-bridge-db-user-s4vgt
+```
 ## Links
 
 * [Operator SDK](https://github.com/operator-framework/operator-sdk)

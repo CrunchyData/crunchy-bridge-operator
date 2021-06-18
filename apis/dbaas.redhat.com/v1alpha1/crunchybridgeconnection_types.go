@@ -45,3 +45,9 @@ type CrunchyBridgeConnectionList struct {
 func init() {
 	SchemeBuilder.Register(&CrunchyBridgeConnection{}, &CrunchyBridgeConnectionList{})
 }
+
+// GetStatusConditions gets the status conditions from the
+// ApplicationGroup status
+func (in *CrunchyBridgeConnection) GetStatusConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
+}
