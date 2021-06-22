@@ -39,6 +39,7 @@ type CrunchyBridgeInventoryReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeinventories,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeinventories/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeinventories/finalizers,verbs=update
 
