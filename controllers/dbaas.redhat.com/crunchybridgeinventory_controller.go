@@ -66,7 +66,7 @@ func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	bridgeapiClient, err := r.setupClient(inventory, logger)
+	bridgeapiClient, err := setupClient(r.Client, inventory, r.APIBaseURL, logger)
 	if err != nil {
 		statusErr := r.updateStatus(ctx, inventory, metav1.ConditionFalse, BackendError, err.Error())
 		if statusErr != nil {
@@ -96,14 +96,14 @@ func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ct
 }
 
 // setupClient
-func (r *CrunchyBridgeInventoryReconciler) setupClient(inventory dbaasredhatcomv1alpha1.CrunchyBridgeInventory, logger logr.Logger) (*bridgeapi.Client, error) {
-	baseUrl, err := url.Parse(r.APIBaseURL)
+func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyBridgeInventory, APIBaseURL string, logger logr.Logger) (*bridgeapi.Client, error) {
+	baseUrl, err := url.Parse(APIBaseURL)
 	if err != nil {
-		logger.Error(err, "Malformed URL", "URL", r.APIBaseURL)
+		logger.Error(err, "Malformed URL", "URL", APIBaseURL)
 		return nil, err
 	}
 	KubeSecretCredentialProvider := &kubeadapter.KubeSecretCredentialProvider{
-		Client:      r.Client,
+		Client:      client,
 		Namespace:   inventory.Spec.CredentialsRef.Namespace,
 		Name:        inventory.Spec.CredentialsRef.Name,
 		KeyField:    "publicApiKey",
