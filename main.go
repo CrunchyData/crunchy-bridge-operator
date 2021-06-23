@@ -103,14 +103,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
 		os.Exit(1)
 	}
-	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
+	inventoryReconciler := &dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: crunchybridgeAPIURL,
-	}).SetupWithManager(mgr); err != nil {
+	}
+
+	if err = inventoryReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInventory")
 		os.Exit(1)
 	}
+
+	if  err = inventoryReconciler.CreateBridgeRegistrationConfigMap(mgr); err != nil {
+		setupLog.Error(err, "unable to create Provider Registration ConfigMap", "controller", "CrunchyBridgeInventory")
+
+	}
+
 	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeConnectionReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
