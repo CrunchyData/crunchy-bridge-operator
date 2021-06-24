@@ -114,8 +114,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if  err = inventoryReconciler.CreateBridgeRegistrationConfigMap(mgr); err != nil {
-		setupLog.Error(err, "unable to create Provider Registration ConfigMap", "controller", "CrunchyBridgeInventory")
+	if err = dbaasredhatcomcontrollers.CreateBridgeRegistrationConfigMap(mgr); err != nil {
+		setupLog.Error(err, "unable to create Provider Registration ConfigMap", "Registration ConfigMap", "Registration ConfigMap")
 
 	}
 
