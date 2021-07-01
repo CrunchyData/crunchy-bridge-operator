@@ -18,6 +18,7 @@ package dbaasredhatcom
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,8 @@ const (
 )
 
 var labels = map[string]string{RELATEDTOLABELNAME: RELATEDTOLABELVALUE, TYPELABELNAME: TYPELABELVALUE}
+
+//+kubebuilder:rbac:groups="",resources=configmaps, verbs=get;list;create;update;patch;delete;watch
 
 // CreateBridgeRegistrationConfigMap invoked from main.go prior to completion of manager start-up so controller/cache not ready, using manager to get  client & API Reader instead."
 func CreateBridgeRegistrationConfigMap(mgr manager.Manager) error {
@@ -98,4 +101,32 @@ func CreateBridgeRegistrationConfigMap(mgr manager.Manager) error {
 	}
 
 	return err
+}
+
+// CleanupBridgeRegistrationConfigMap invoked from main.go will be called when operator-uninstall"
+func CleanupBridgeRegistrationConfigMap(mgr manager.Manager, setupLog logr.Logger) error {
+	mgrClient := mgr.GetClient()
+	apiReader := mgr.GetAPIReader()
+
+	c := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: NAME,
+		},
+	}
+
+	err := apiReader.Get(context.TODO(), types.NamespacedName{Name: NAME, Namespace: NAMESPACE}, c)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		setupLog.Error(err, "unable to delete Provider Registration ConfigMap", "configMap.name", NAME, "configMap.Namespace", NAMESPACE)
+		return err
+	}
+	// Delete the BridgeRegistrationConfigMap
+	if err = mgrClient.Delete(context.TODO(), c); err != nil {
+		setupLog.Error(err, "unable to delete Provider Registration ConfigMap", "configMap.name", NAME, "configMap.Namespace", NAMESPACE)
+		return err
+	}
+	setupLog.V(1).Info("Provider Registration ConfigMap Deleted", "configMap.name", NAME, "configMap.Namespace", NAMESPACE)
+	return nil
 }

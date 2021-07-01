@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
 	"os"
 
@@ -140,8 +141,17 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := startManagerWithStopHandler(mgr, setupLog); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func startManagerWithStopHandler(mgr ctrl.Manager, setupLog logr.Logger) error {
+	defer func() {
+		setupLog.Info("SIGINT/KILL received, deleting Bridge Registration ConfigMap ")
+		dbaasredhatcomcontrollers.CleanupBridgeRegistrationConfigMap(mgr, setupLog)
+	}()
+	err := mgr.Start(ctrl.SetupSignalHandler())
+	return err
 }
