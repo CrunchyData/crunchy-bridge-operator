@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
 	"os"
 
@@ -103,14 +104,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
 		os.Exit(1)
 	}
-	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
+	inventoryReconciler := &dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: crunchybridgeAPIURL,
-	}).SetupWithManager(mgr); err != nil {
+	}
+
+	if err = inventoryReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInventory")
 		os.Exit(1)
 	}
+
+	if err = dbaasredhatcomcontrollers.CreateBridgeRegistrationConfigMap(mgr); err != nil {
+		setupLog.Error(err, "unable to create Provider Registration ConfigMap", "Registration ConfigMap", "Registration ConfigMap")
+
+	}
+
 	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeConnectionReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
@@ -132,8 +141,17 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := startManagerWithStopHandler(mgr, setupLog); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func startManagerWithStopHandler(mgr ctrl.Manager, setupLog logr.Logger) error {
+	defer func() {
+		setupLog.Info("SIGINT/KILL received, deleting Bridge Registration ConfigMap ")
+		dbaasredhatcomcontrollers.CleanupBridgeRegistrationConfigMap(mgr, setupLog)
+	}()
+	err := mgr.Start(ctrl.SetupSignalHandler())
+	return err
 }
