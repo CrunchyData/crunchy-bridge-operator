@@ -6,20 +6,27 @@ import (
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ptr "k8s.io/utils/pointer"
+	"net"
+	"net/url"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 )
 
 const (
-	INSTANCE_ID string = "instanceId"
+	HOSTKEYNAME         string = "host"
+	PORTKEYNAME         string = "port"
+	DBKEYNAME           string = "database"
+	TYPEKEYNAME         string = "type"
+	DATABASESERVICETYPE string = "postgresql"
 )
 
+// connectionDetails
 func (r *CrunchyBridgeConnectionReconciler) connectionDetails(instanceID string, connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, bridgeapi *bridgeapi.Client, req ctrl.Request, logger logr.Logger) error {
 
-	if r.isBindingExist(instanceID, connection, logger) {
+	if r.isBindingExist(connection) {
 		return nil
 	}
 
@@ -35,9 +42,16 @@ func (r *CrunchyBridgeConnectionReconciler) connectionDetails(instanceID string,
 		logger.Error(err, "Error in creating the secret")
 		return err
 	}
-	connection.Status.ConnectionString = connectionRole.URI
+
+	configMap := getOwnedConfigMap(connection, connectionRole.URI)
+	configMapCreated, err := r.Clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error(err, "Error in creating the configMap")
+		return err
+	}
+
 	connection.Status.CredentialsRef = &corev1.LocalObjectReference{Name: secretCreated.Name}
-	connection.Status.ConnectionInfo = map[string]string{"instanceId": instanceID}
+	connection.Status.ConnectionInfoRef = &corev1.LocalObjectReference{Name: configMapCreated.Name}
 
 	return nil
 
@@ -50,7 +64,7 @@ func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 			Kind: "Opaque",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "crunchy-bridge-db-user-",
+			GenerateName: "crunchy-bridge-db-credentials-",
 			Namespace:    connection.Namespace,
 			Labels: map[string]string{
 				"managed-by":      "crunchy-bridge-operator",
@@ -61,7 +75,7 @@ func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					UID:                connection.GetUID(),
-					APIVersion:         "dbaas.redhat.com/v1alpha1",
+					APIVersion:         connection.APIVersion,
 					BlockOwnerDeletion: ptr.BoolPtr(false),
 					Controller:         ptr.BoolPtr(true),
 					Kind:               connection.Kind,
@@ -76,27 +90,62 @@ func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 	}
 }
 
-func (r *CrunchyBridgeConnectionReconciler) isBindingExist(instanceID string, connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, logger logr.Logger) bool {
+// getOwnedConfigMap returns a configmap object for database name, host , port with ownership set
+func getOwnedConfigMap(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, connectionString string) *corev1.ConfigMap {
 
-	existingInsId, ok := connection.Status.ConnectionInfo[INSTANCE_ID]
-	if !ok {
-		return ok
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "crunchy-bridge-db-conn-cm-",
+			Namespace:    connection.Namespace,
+			Labels: map[string]string{
+				"managed-by":      "crunchy-bridge-operator",
+				"owner":           connection.Name,
+				"owner.kind":      connection.Kind,
+				"owner.namespace": connection.Namespace,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					UID:                connection.GetUID(),
+					APIVersion:         connection.APIVersion,
+					BlockOwnerDeletion: ptr.BoolPtr(false),
+					Controller:         ptr.BoolPtr(true),
+					Kind:               connection.Kind,
+					Name:               connection.Name,
+				},
+			},
+		},
+		Data: connectionCMData(connectionString),
 	}
+}
+
+// connectionCMData
+func connectionCMData(connectionString string) map[string]string {
+	bindingParamsMap := make(map[string]string)
+	u, err := url.Parse(connectionString)
+	if err != nil {
+		return bindingParamsMap
+	}
+	host, port, _ := net.SplitHostPort(u.Host)
+	bindingParamsMap[TYPEKEYNAME] = DATABASESERVICETYPE
+	bindingParamsMap[PROVIDERDATAKEY] = PROVIDERDATAVALUE
+	bindingParamsMap[HOSTKEYNAME] = host
+	bindingParamsMap[PORTKEYNAME] = port
+	bindingParamsMap[DBKEYNAME] = strings.TrimLeft(u.Path, "/")
+	return bindingParamsMap
+
+}
+
+// isBindingExist checking if binding already exits
+func (r *CrunchyBridgeConnectionReconciler) isBindingExist(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection) bool {
+
 	cond := GetConnectonCondition(connection, string(ReadyForBinding))
-	if existingInsId == instanceID && cond != nil && cond.Status == metav1.ConditionTrue {
+	if cond != nil && cond.Status == metav1.ConditionTrue {
 		return true
 	}
 
-	// remove the previous created secret if instance id changed
-	existingtSecret := connection.Status.CredentialsRef.Name
-	found := &corev1.Secret{}
-	err := r.Get(context.Background(), types.NamespacedName{Name: existingtSecret, Namespace: connection.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		return false
-	}
-	if err := r.Client.Delete(context.Background(), found); err != nil {
-		logger.Error(err, "Failed to delete secret", "secretName", existingtSecret)
-		return false
-	}
 	return false
 }

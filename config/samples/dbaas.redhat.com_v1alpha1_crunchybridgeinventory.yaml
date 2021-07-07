@@ -5,4 +5,4 @@ metadata:
 spec:
   credentialsRef:
     name: crunchy-bridge-api-key
-    namespace: crunchy-bridge-operator-system
+    namespace: openshift-dbaas-operator

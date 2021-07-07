@@ -9,17 +9,16 @@ import (
 )
 
 const (
-	TEAM_ID                = "team_id"
-	PROVIDER_ID            = "provider_id"
-	REGION_ID              = "region_id"
-	CREATED_AT             = "created_at"
-	UPDATED_AT             = "updated_at"
-	MAJOR_VERSION          = "major_version"
-	STORAGE                = "storage"
-	CPU                    = "cpu"
-	MEMORY                 = "memory"
-	IS_HA                  = "is_ha"
-	CRUNCHYBRIDGE_POSTGRES = "Crunchy Bridge managed PostgreSQL"
+	TEAM_ID       = "team_id"
+	PROVIDER_ID   = "provider_id"
+	REGION_ID     = "region_id"
+	CREATED_AT    = "created_at"
+	UPDATED_AT    = "updated_at"
+	MAJOR_VERSION = "major_version"
+	STORAGE       = "storage"
+	CPU           = "cpu"
+	MEMORY        = "memory"
+	IS_HA         = "is_ha"
 )
 
 // discoverInventories query crunchy bridge and return list of inverntories by team
@@ -57,6 +56,6 @@ func (r *CrunchyBridgeInventoryReconciler) discoverInventories(dbaasredhatcomv1a
 	}
 
 	dbaasredhatcomv1alpha1.Status.Instances = bridgeInstances
-	dbaasredhatcomv1alpha1.Status.Type = CRUNCHYBRIDGE_POSTGRES
+
 	return nil
 }

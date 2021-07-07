@@ -68,15 +68,14 @@ Instances:
   ```
   kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeconnection.yaml
  ``` 
-The CRs status will be updated with connection details of specified instance ID.
+The CRs status will be updated with connection details of specified instance ID. 
 
 example:
 ```
-connectionInfo:
-instanceId: na7wuu36f5f67oaxm75ngjl5pe
-connectionString: >-postgres://@p<url>:<>/postgres
-credentialsRef:
-name: crunchy-bridge-db-user-s4vgt
+  connectionInfoRef:
+    name: crunchy-bridge-db-info-b5gs5 // name of configmap contains connection info like host, port, datbase name
+  credentialsRef:
+    name: crunchy-bridge-db-user-qb9tm // name of secret contains username and password
 ```
 ## Links
 

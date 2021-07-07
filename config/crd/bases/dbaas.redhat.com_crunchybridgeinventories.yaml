@@ -128,15 +128,15 @@ spec:
                 description: A list of instances returned from querying the DB provider
                 items:
                   properties:
-                    extraInfo:
+                    instanceID:
+                      description: The ID for this instance in the database service
+                      type: string
+                    instanceInfo:
                       additionalProperties:
                         type: string
                       description: Any other provider-specific information related
                         to this instance
                       type: object
-                    instanceID:
-                      description: The ID for this instance in the database service
-                      type: string
                     name:
                       description: The name of this instance in the database service
                       type: string
@@ -144,11 +144,6 @@ spec:
                   - instanceID
                   type: object
                 type: array
-              type:
-                description: E.g., MongoDB, Postgres
-                type: string
-            required:
-            - type
             type: object
         type: object
     served: true
