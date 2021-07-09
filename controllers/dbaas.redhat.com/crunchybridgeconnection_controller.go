@@ -110,7 +110,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 		logger.Error(err, "Error while getting connection details")
 		return ctrl.Result{}, err
 	}
-	statusErr := r.updateStatus(ctx, connection, metav1.ConditionTrue, ReadyForBinding, SuccessConnection)
+	statusErr := r.updateStatus(ctx, connection, metav1.ConditionTrue, Ready, SuccessConnection)
 	if statusErr != nil {
 		logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
 		return ctrl.Result{Requeue: true}, statusErr

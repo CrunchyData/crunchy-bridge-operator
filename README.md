@@ -73,9 +73,9 @@ The CRs status will be updated with connection details of specified instance ID.
 example:
 ```
   connectionInfoRef:
-    name: crunchy-bridge-db-info-b5gs5 // name of configmap contains connection info like host, port, datbase name
+   name: crunchy-bridge-db-conn-cm-k8rkv // name of configmap contains connection info like host, port, datbase name
   credentialsRef:
-    name: crunchy-bridge-db-user-qb9tm // name of secret contains username and password
+   name: crunchy-bridge-db-credentials-vmml2 // name of secret contains username and password
 ```
 ## Links
 

@@ -69,7 +69,7 @@ func (r *CrunchyBridgeInventoryReconciler) Reconcile(ctx context.Context, req ct
 
 	bridgeapiClient, err := setupClient(r.Client, inventory, r.APIBaseURL, logger)
 	if err != nil {
-		statusErr := r.updateStatus(ctx, inventory, metav1.ConditionFalse, BackendError, err.Error())
+		statusErr := r.updateStatus(ctx, inventory, metav1.ConditionFalse, AuthenticationError, err.Error())
 		if statusErr != nil {
 			logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
 			return ctrl.Result{Requeue: true}, statusErr
