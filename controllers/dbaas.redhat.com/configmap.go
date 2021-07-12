@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	PROVIDERDATAVALUE = "Crunchy Bridge managed PostgreSQL"
-	PROVIDERDATAKEY   = "provider"
-
+	PROVIDERDATAVALUE     = "Red Hat DBaaS / Crunchy Bridge"
+	PROVIDERDATAKEY       = "provider"
+	DISPLAYNAMEKEY        = "display_name"
+	DISPLAYNAMEVALUE      = "Crunchy Bridge managed PostgreSQL"
 	INVENTORYDATAVALUE    = "CrunchyBridgeInventory"
 	INVENTORYKINDDATAKEY  = "inventory_kind"
 	CONNECTIONKINDDATAKEY = "connection_kind"
@@ -37,7 +38,7 @@ const (
 	CREDENTIALFIELDS      = "credentials_fields"
 	LOGO                  = "logo"
 	NAME                  = "crunchy-bridge-registration"
-	NAMESPACE             = "dbaas-operator" //configmap namespace
+	NAMESPACE             = "openshift-dbaas-operator" //configmap namespace
 	RELATEDTOLABELNAME    = "related-to"
 	RELATEDTOLABELVALUE   = "dbaas-operator"
 	TYPELABELNAME         = "type"
@@ -87,6 +88,7 @@ func CreateBridgeRegistrationConfigMap(mgr manager.Manager) error {
 			},
 			Data: map[string]string{
 				PROVIDERDATAKEY:       PROVIDERDATAVALUE,
+				DISPLAYNAMEKEY:        DISPLAYNAMEVALUE,
 				INVENTORYKINDDATAKEY:  INVENTORYDATAVALUE,
 				CONNECTIONKINDDATAKEY: CONNECTIONDATAVALUE,
 				LOGO:                  logoValues,
