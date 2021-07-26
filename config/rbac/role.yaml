@@ -9,7 +9,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
+  - secrets
   verbs:
   - create
   - delete
@@ -19,15 +19,14 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
+  - apps
   resources:
-  - secrets
+  - deployments
   verbs:
   - create
   - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -78,6 +77,26 @@ rules:
   - crunchybridge.crunchydata.com
   resources:
   - databaseroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - '*'
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - '*/status'
   verbs:
   - get
   - patch

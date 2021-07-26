@@ -21,6 +21,8 @@ const (
 	DBKEYNAME           string = "database"
 	TYPEKEYNAME         string = "type"
 	DATABASESERVICETYPE string = "postgresql"
+	PROVIDERVALUE              = "Red Hat DBaaS / Crunchy Bridge"
+	PROVIDERKEY                = "provider"
 )
 
 // connectionDetails
@@ -131,7 +133,7 @@ func connectionCMData(connectionString string) map[string]string {
 	}
 	host, port, _ := net.SplitHostPort(u.Host)
 	bindingParamsMap[TYPEKEYNAME] = DATABASESERVICETYPE
-	bindingParamsMap[PROVIDERDATAKEY] = PROVIDERDATAVALUE
+	bindingParamsMap[PROVIDERKEY] = PROVIDERVALUE
 	bindingParamsMap[HOSTKEYNAME] = host
 	bindingParamsMap[PORTKEYNAME] = port
 	bindingParamsMap[DBKEYNAME] = strings.TrimLeft(u.Path, "/")

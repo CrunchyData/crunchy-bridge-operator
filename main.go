@@ -18,10 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/go-logr/logr"
+	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"os"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -104,6 +103,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
 		os.Exit(1)
 	}
+
 	inventoryReconciler := &dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
@@ -115,9 +115,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = dbaasredhatcomcontrollers.CreateBridgeRegistrationConfigMap(mgr); err != nil {
-		setupLog.Error(err, "unable to create Provider Registration ConfigMap", "Registration ConfigMap", "Registration ConfigMap")
-
+	dbaaSProviderReconciler := &dbaasredhatcomcontrollers.DBaaSProviderReconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Log:       setupLog,
+		Clientset: clientset,
+	}
+	if err := dbaasoperator.AddToScheme(mgr.GetScheme()); err != nil {
+		setupLog.Error(err, "unable register the API with the scheme ", "controller", "DBaaSProvider")
+		os.Exit(1)
+	}
+	if err = dbaaSProviderReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DBaaSProvider")
+		os.Exit(1)
 	}
 
 	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeConnectionReconciler{
@@ -141,17 +151,8 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := startManagerWithStopHandler(mgr, setupLog); err != nil {
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func startManagerWithStopHandler(mgr ctrl.Manager, setupLog logr.Logger) error {
-	defer func() {
-		setupLog.Info("SIGINT/KILL received, deleting Bridge Registration ConfigMap ")
-		dbaasredhatcomcontrollers.CleanupBridgeRegistrationConfigMap(mgr, setupLog)
-	}()
-	err := mgr.Start(ctrl.SetupSignalHandler())
-	return err
 }

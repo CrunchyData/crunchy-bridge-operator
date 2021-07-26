@@ -107,8 +107,8 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 		Client:      client,
 		Namespace:   inventory.Spec.CredentialsRef.Namespace,
 		Name:        inventory.Spec.CredentialsRef.Name,
-		KeyField:    "publicApiKey",
-		SecretField: "privateApiSecret",
+		KeyField:    KEYFIELDNAME,
+		SecretField: SECRETFIELDNAME,
 	}
 	err = bridgeapi.SetLogin(KubeSecretCredentialProvider, baseUrl)
 	if err != nil {
