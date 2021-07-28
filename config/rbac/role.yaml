@@ -84,26 +84,6 @@ rules:
 - apiGroups:
   - dbaas.redhat.com
   resources:
-  - '*'
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dbaas.redhat.com
-  resources:
-  - '*/status'
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - dbaas.redhat.com
-  resources:
   - crunchybridgeconnections
   verbs:
   - create
@@ -149,6 +129,26 @@ rules:
   - dbaas.redhat.com
   resources:
   - crunchybridgeinventories/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - dbaasproviders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - dbaasproviders/status
   verbs:
   - get
   - patch

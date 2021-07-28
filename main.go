@@ -49,6 +49,7 @@ func init() {
 
 	utilruntime.Must(crunchybridgev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dbaasredhatcomv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dbaasoperator.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -121,10 +122,7 @@ func main() {
 		Log:       setupLog,
 		Clientset: clientset,
 	}
-	if err := dbaasoperator.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "unable register the API with the scheme ", "controller", "DBaaSProvider")
-		os.Exit(1)
-	}
+
 	if err = dbaaSProviderReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DBaaSProvider")
 		os.Exit(1)

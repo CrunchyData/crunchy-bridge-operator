@@ -44,7 +44,7 @@ import (
 const (
 	PROVIDER           = "Red Hat DBaaS / Crunchy Bridge"
 	DISPLAYNAME        = "Crunchy Bridge managed PostgreSQL"
-	DISPLAYDESCRIPTION = " The Crunchy Bridge Fully Managed Postgres as a Service."
+	DISPLAYDESCRIPTION = "The managed PostgreSQL database service that allows you to focus on your application, not your database. Harness the power of Postgres on the cloud provider of your choice with trusted Crunchy Data support."
 
 	INVENTORYDATAVALUE     = "CrunchyBridgeInventory"
 	CONNECTIONDATAVALUE    = "CrunchyBridgeConnection"
@@ -74,8 +74,8 @@ type DBaaSProviderReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;watch
-// +kubebuilder:rbac:groups=dbaas.redhat.com,resources=*,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=dbaas.redhat.com,resources=*/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=dbaas.redhat.com,resources=dbaasproviders,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=dbaas.redhat.com,resources=dbaasproviders/status,verbs=get;update;patch
 
 func (r *DBaaSProviderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
