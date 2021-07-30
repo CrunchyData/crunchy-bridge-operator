@@ -48,9 +48,14 @@ spec:
         resources:
           limits:
             cpu: 100m
-            memory: 120Mi
+            memory: 256Mi
           requests:
             cpu: 100m
-            memory: 100Mi
+            memory: 128Mi
+        env:
+          - name: INSTALL_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

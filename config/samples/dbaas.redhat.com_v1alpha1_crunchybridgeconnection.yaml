@@ -4,7 +4,8 @@ metadata:
   name: crunchybridgeconnection-sample
 spec:
   instanceID: na7wuu36f5f67oaxm75ngjl5pe
-  inventory:
-    name: crunchybridgeinventory-sample
+  inventoryRef:
+    name: crunchy-inventory
+    namespace: openshift-operators
 
 

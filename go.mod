@@ -10,9 +10,9 @@ require (
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v0.20.2
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
+	k8s.io/utils v0.0.0-20210709001253-0e1f9d693477
 	sigs.k8s.io/controller-runtime v0.8.3
 
 )
 
-replace github.com/RHEcosystemAppEng/dbaas-operator v1.0.0 => github.com/RHEcosystemAppEng/dbaas-operator v0.0.0-20210616190557-f8ab366a6505
+replace github.com/RHEcosystemAppEng/dbaas-operator v1.0.0 => github.com/RHEcosystemAppEng/dbaas-operator v1.0.1-0.20210727140413-3c5d0fcb7d65
