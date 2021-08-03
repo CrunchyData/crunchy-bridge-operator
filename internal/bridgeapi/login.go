@@ -17,6 +17,7 @@ package bridgeapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -38,46 +39,65 @@ type loginManager struct {
 	apiTarget    *url.URL
 	refreshTimer *time.Timer
 	loginSource  CredentialProvider
+	Error        error
 }
 
 func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 	lm := &loginManager{
 		loginSource: cp,
 		apiTarget:   target,
+		Error:       nil,
 	}
 
-	lm.login()
+	if err := lm.login(); err != nil {
+		lm.Error = err
+	}
+
 	return lm
 }
 
-func (lm *loginManager) login() {
+func (lm *loginManager) login() error {
 	creds := lm.loginSource.ProvideCredential()
+	if creds.Error != nil {
+		pkgLog.Error(creds.Error, "error creating token login request")
+		return creds.Error
+	}
 	req, err := http.NewRequest(http.MethodPost, lm.apiTarget.String()+"/token", nil)
 	if err != nil {
 		pkgLog.Error(err, "error creating token login request")
-		return
+		return err
 	}
 	req.SetBasicAuth(creds.Key, creds.Secret)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		pkgLog.Error(err, "error creating http client")
-		return
+	if err != nil || resp.Status == "401 Unauthorized" || resp.StatusCode != http.StatusOK {
+		pkgLog.Error(err, "error creating http client", "resp.Status", resp.Status)
+		lm.cleamTimer()
+		return fmt.Errorf("error creating http clientt: %w , %s", err, resp.Status)
 	}
+
 	defer resp.Body.Close()
 
 	var tr tokenResponse
 	err = json.NewDecoder(resp.Body).Decode(&tr)
 	if err != nil {
 		pkgLog.Error(err, "error unmarshaling token response body")
-		return
+		return err
 	}
 
 	lm.Lock()
 	defer lm.Unlock()
 	lm.activeToken = tr.Token
 
+	lm.cleamTimer()
+	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(tr.ExpiresIn-refreshBuffer),
+		func() { lm.login() })
+
+	return nil
+}
+
+func (lm *loginManager) cleamTimer() {
 	// If refresh timer exists, clean it up before creating new
 	if lm.refreshTimer != nil {
 		if !lm.refreshTimer.Stop() {
@@ -85,7 +105,6 @@ func (lm *loginManager) login() {
 			<-lm.refreshTimer.C
 		}
 	}
-	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(tr.ExpiresIn-refreshBuffer), lm.login)
 }
 
 func (lm *loginManager) UpdateLogin(cp CredentialProvider) {
@@ -93,6 +112,7 @@ func (lm *loginManager) UpdateLogin(cp CredentialProvider) {
 	defer lm.Unlock()
 
 	lm.loginSource = cp
+	lm.Error = nil
 }
 
 func (lm *loginManager) UpdateAuthURL(target *url.URL) {
@@ -100,11 +120,17 @@ func (lm *loginManager) UpdateAuthURL(target *url.URL) {
 	defer lm.Unlock()
 
 	lm.apiTarget = target
+	lm.Error = nil
 }
 
 func SetLogin(cp CredentialProvider, authBaseURL *url.URL) error {
 	if primaryLogin == nil {
 		primaryLogin = newLoginManager(cp, authBaseURL)
+		if primaryLogin.Error != nil {
+			err := primaryLogin.Error
+			primaryLogin = nil
+			return err
+		}
 	} else {
 		primaryLogin.UpdateLogin(cp)
 		primaryLogin.UpdateAuthURL(authBaseURL)

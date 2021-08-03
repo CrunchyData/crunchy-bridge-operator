@@ -18,6 +18,7 @@ package bridgeapi
 type LoginCred struct {
 	Key    string
 	Secret string
+	Error  error
 }
 
 func (lc LoginCred) ProvideCredential() LoginCred {

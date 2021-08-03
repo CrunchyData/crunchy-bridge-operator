@@ -17,6 +17,7 @@ package kubeadapter
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 
@@ -49,6 +50,7 @@ func (ks *KubeSecretCredentialProvider) ProvideCredential() bridgeapi.LoginCred 
 	}
 
 	if err := ks.Client.Get(context.Background(), selector, secret); err != nil {
+		formedCred.Error = fmt.Errorf("Error while getting the secret: %w", err)
 		return formedCred
 	}
 

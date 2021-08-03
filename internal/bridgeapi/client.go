@@ -62,8 +62,13 @@ func (c *Client) precheck() error {
 }
 
 // helper to set up auth with current bearer token
-func setBearer(req *http.Request) {
+func setBearer(req *http.Request) error {
+
+	if primaryLogin.Error != nil {
+		return primaryLogin.Error
+	}
 	req.Header.Set("Authorization", "Bearer "+primaryLogin.activeToken)
+	return nil
 }
 
 func (c *Client) CreateCluster(cr CreateRequest) error {
@@ -136,7 +141,10 @@ func (c *Client) ListClusters() (ClusterList, error) {
 		c.Log.Error(err, "during list personal clusters request prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return ClusterList{}, err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -171,7 +179,10 @@ func (c *Client) ListTeamClusters(teamID string) (ClusterList, error) {
 		c.Log.Error(err, "during list team clusters request prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return ClusterList{}, err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -206,7 +217,10 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 		c.Log.Error(err, "during list teams prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return ClusterList{}, err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -267,7 +281,10 @@ func (c *Client) DefaultConnRole(id string) (ConnectionRole, error) {
 		c.Log.Error(err, "during cluster role request prep")
 		return ConnectionRole{}, err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return ConnectionRole{}, err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -303,7 +320,10 @@ func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
 		c.Log.Error(err, "during cluster detail request")
 		return ClusterDetail{}, err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return ClusterDetail{}, err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -340,7 +360,10 @@ func (c *Client) DeleteCluster(id string) error {
 		c.Log.Error(err, "during cluster delete request")
 		return err
 	}
-	setBearer(req)
+	err = setBearer(req)
+	if err != nil {
+		return err
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
