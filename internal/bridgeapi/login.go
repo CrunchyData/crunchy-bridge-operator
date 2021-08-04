@@ -102,15 +102,13 @@ func (lm *loginManager) UpdateAuthURL(target *url.URL) {
 	lm.apiTarget = target
 }
 
-func SetLogin(cp CredentialProvider, authBaseURL *url.URL) error {
+func SetLogin(cp CredentialProvider, authBaseURL *url.URL) {
 	if primaryLogin == nil {
 		primaryLogin = newLoginManager(cp, authBaseURL)
 	} else {
 		primaryLogin.UpdateLogin(cp)
 		primaryLogin.UpdateAuthURL(authBaseURL)
 	}
-
-	return nil
 }
 
 type tokenResponse struct {

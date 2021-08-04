@@ -110,10 +110,7 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 		KeyField:    KEYFIELDNAME,
 		SecretField: SECRETFIELDNAME,
 	}
-	err = bridgeapi.SetLogin(KubeSecretCredentialProvider, baseUrl)
-	if err != nil {
-		return nil, err
-	}
+	bridgeapi.SetLogin(KubeSecretCredentialProvider, baseUrl)
 
 	bridgeapiClient := &bridgeapi.Client{
 		APITarget: baseUrl,
