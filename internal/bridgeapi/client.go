@@ -58,7 +58,20 @@ func (c *Client) precheck() error {
 		c.client = &http.Client{}
 	}
 
-	return nil
+	// Verify login state
+	if ls := c.GetLoginState(); ls == LoginFailed || ls == LoginInactive {
+		// Make a login attempt on temp failure states before declaring a failure
+		primaryLogin.login()
+	}
+	return c.GetLoginState().toError()
+}
+
+func (c *Client) GetLoginState() LoginState {
+	if primaryLogin == nil {
+		return LoginUnset
+	} else {
+		return primaryLogin.State()
+	}
 }
 
 // helper to set up auth with current bearer token
