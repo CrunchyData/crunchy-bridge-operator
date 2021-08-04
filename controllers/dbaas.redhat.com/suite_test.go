@@ -17,11 +17,19 @@ limitations under the License.
 package dbaasredhatcom
 
 import (
+	"context"
+	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/kubernetes"
+	"os"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
+
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +48,16 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var mockedHTTPServer *ghttp.Server
+var ctx context.Context
+
+const (
+	installNamespaceEnvVar = "INSTALL_NAMESPACE"
+	testNamespace          = "default"
+	operatorConditionName  = "OPERATOR_CONDITION_NAME"
+	operatorConditionValue = "crunchy-bridge-operator.v0.0.1"
+	crunchybridgeAPIURL    = "https://api.crunchybridge.com"
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -54,7 +72,10 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "..", "config", "crd", "bases"),
+			filepath.Join("..", "..", "config", "test", "crd"),
+		},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -62,17 +83,72 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	clientset, err := kubernetes.NewForConfig(cfg)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(clientset).NotTo(BeNil())
+
 	err = dbaasredhatcomv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = dbaasredhatcomv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = dbaasoperator.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = apiextv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
 
+	ctx = context.Background()
+
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(mgr).ToNot(BeNil())
+
+	err = os.Setenv(installNamespaceEnvVar, testNamespace)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = os.Setenv(operatorConditionName, operatorConditionValue)
+	Expect(err).NotTo(HaveOccurred())
+
+	inventoryReconciler := &CrunchyBridgeInventoryReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: crunchybridgeAPIURL,
+	}
+	err = inventoryReconciler.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	DbaaSProviderReconciler := &DBaaSProviderReconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Log:       ctrl.Log.WithName("controllers").WithName("DBaaSProviderReconciler"),
+		Clientset: clientset,
+	}
+	err = DbaaSProviderReconciler.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	dbaasredhatcomcontrollers := &CrunchyBridgeConnectionReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Clientset:  clientset,
+		APIBaseURL: crunchybridgeAPIURL,
+	}
+	err = dbaasredhatcomcontrollers.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		err = mgr.Start(ctrl.SetupSignalHandler())
+		Expect(err).ToNot(HaveOccurred())
+	}()
 
 }, 60)
 
