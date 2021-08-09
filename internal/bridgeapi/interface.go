@@ -20,8 +20,9 @@ type LoginCred struct {
 	Secret string
 }
 
-func (lc LoginCred) ProvideCredential() LoginCred {
-	return lc
+// LoginCred is a static source of credentials and never returns an error
+func (lc LoginCred) ProvideCredential() (LoginCred, error) {
+	return lc, nil
 }
 
 func (lc LoginCred) Zero() bool {
@@ -29,5 +30,5 @@ func (lc LoginCred) Zero() bool {
 }
 
 type CredentialProvider interface {
-	ProvideCredential() LoginCred
+	ProvideCredential() (LoginCred, error)
 }

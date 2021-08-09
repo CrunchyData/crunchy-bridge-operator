@@ -68,7 +68,7 @@ func (c *Client) precheck() error {
 
 func (c *Client) GetLoginState() LoginState {
 	if primaryLogin == nil {
-		return LoginUnset
+		return LoginUnstarted
 	} else {
 		return primaryLogin.State()
 	}
@@ -361,7 +361,7 @@ func (c *Client) DeleteCluster(id string) error {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		c.Log.Info("unexpected status code from API(cluster delete)", "statusCode", resp.StatusCode)
 		return errors.New("unexpected response status from API")
 	}

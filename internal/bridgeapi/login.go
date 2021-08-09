@@ -29,7 +29,7 @@ const (
 	// in seconds prior to expiration time
 	refreshBuffer = 15
 	retryComm     = 2
-	retryCred     = 90
+	retryCred     = 60
 )
 
 // TODO: move login manager from package global to client internal
@@ -55,11 +55,17 @@ func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 }
 
 func (lm *loginManager) login() {
-	creds := lm.loginSource.ProvideCredential()
+	creds, err := lm.loginSource.ProvideCredential()
+	if err != nil {
+		pkgLog.Error(err, "error retrieving credentials")
+		lm.setNextLogin(retryCred)
+		return
+	}
 	if creds.Zero() {
 		// Fast fail login process for unset credentials, may be expected
 		// depending on "eventual consistency" usage
 		pkgLog.Info("provided credentials currently blank")
+		lm.setNextLogin(retryCred)
 		return
 	}
 
@@ -84,7 +90,10 @@ func (lm *loginManager) login() {
 
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		pkgLog.Error(fmt.Errorf("API returned status %d for login [%s]", resp.StatusCode, creds.Key), "login failure")
-		lm.failBadCreds()
+		lm.Lock()
+		lm.curState = LoginInvalidCreds
+		lm.Unlock()
+		lm.setNextLogin(retryCred)
 		return
 	} else if resp.StatusCode != http.StatusOK {
 		pkgLog.Error(
@@ -117,32 +126,17 @@ func (lm *loginManager) failLoginTemp() {
 	lm.Lock()
 	defer lm.Unlock()
 
-	if lm.curState == LoginUnset {
+	if lm.curState == LoginUnstarted {
 		lm.curState = LoginFailed
-	}
-}
-
-func (lm *loginManager) failBadCreds() {
-	lm.Lock()
-	defer lm.Unlock()
-
-	creds := lm.loginSource.ProvideCredential()
-	if !creds.Zero() {
-		lm.curState = LoginBadCreds
-		lm.setNextLogin(retryCred)
 	}
 }
 
 func (lm *loginManager) setNextLogin(sec int64) {
 	lm.Lock()
 	defer lm.Unlock()
-
 	// If refresh timer exists, clean it up before creating new
 	if lm.refreshTimer != nil {
-		if !lm.refreshTimer.Stop() {
-			// Drain channel before leaving to GC
-			<-lm.refreshTimer.C
-		}
+		lm.refreshTimer.Stop()
 	}
 	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(sec), lm.login)
 }
@@ -160,12 +154,9 @@ func (lm *loginManager) setExpiration(sec int64) {
 	lm.Lock()
 	defer lm.Unlock()
 
-	// If refresh timer exists, clean it up before creating new
+	// If expire timer exists, clean it up before creating new
 	if lm.expireTimer != nil {
-		if !lm.expireTimer.Stop() {
-			// Drain channel before leaving to GC
-			<-lm.expireTimer.C
-		}
+		lm.expireTimer.Stop()
 	}
 	lm.expireTimer = time.AfterFunc(time.Second*time.Duration(sec), lm.expireLogin)
 }

@@ -39,8 +39,7 @@ type KubeSecretCredentialProvider struct {
 	SecretField string
 }
 
-// TODO: untested
-func (ks *KubeSecretCredentialProvider) ProvideCredential() bridgeapi.LoginCred {
+func (ks *KubeSecretCredentialProvider) ProvideCredential() (bridgeapi.LoginCred, error) {
 	formedCred := bridgeapi.LoginCred{}
 	secret := &corev1.Secret{}
 	selector := client.ObjectKey{
@@ -49,7 +48,7 @@ func (ks *KubeSecretCredentialProvider) ProvideCredential() bridgeapi.LoginCred 
 	}
 
 	if err := ks.Client.Get(context.Background(), selector, secret); err != nil {
-		return formedCred
+		return formedCred, err
 	}
 
 	for k, v := range secret.Data {
@@ -61,5 +60,5 @@ func (ks *KubeSecretCredentialProvider) ProvideCredential() bridgeapi.LoginCred 
 		}
 	}
 
-	return formedCred
+	return formedCred, nil
 }

@@ -18,14 +18,17 @@ package dbaasredhatcom
 
 import (
 	"context"
+	"errors"
+	"net/url"
+
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
+
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"net/url"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -103,14 +106,26 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 		logger.Error(err, "Malformed URL", "URL", APIBaseURL)
 		return nil, err
 	}
-	KubeSecretCredentialProvider := &kubeadapter.KubeSecretCredentialProvider{
+	kubeSecretProvider := &kubeadapter.KubeSecretCredentialProvider{
 		Client:      client,
 		Namespace:   inventory.Spec.CredentialsRef.Namespace,
 		Name:        inventory.Spec.CredentialsRef.Name,
 		KeyField:    KEYFIELDNAME,
 		SecretField: SECRETFIELDNAME,
 	}
-	bridgeapi.SetLogin(KubeSecretCredentialProvider, baseUrl)
+
+	// Check that the KSP is returning a useful value
+	testCred, err := kubeSecretProvider.ProvideCredential()
+	if err != nil {
+		return nil, err
+	} else if testCred.Zero() {
+		// Login credential secret is a prerequisite for DBaaS operation, so
+		// return error if set to empty
+		return nil, errors.New("API secret initialized to zero values")
+	}
+
+	// Initialize login with known good provider
+	bridgeapi.SetLogin(kubeSecretProvider, baseUrl)
 
 	bridgeapiClient := &bridgeapi.Client{
 		APITarget: baseUrl,
