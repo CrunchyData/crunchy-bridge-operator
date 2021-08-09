@@ -17,6 +17,7 @@ package bridgeapi
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -24,7 +25,49 @@ var (
 	ErrorBadRequest = errors.New("Invalid request")
 	ErrorConflict   = errors.New("Non-unique name specified in request")
 	ErrorAPIUnset   = errors.New("No API target URL set")
+
+	ErrorFailedLogin  = errors.New("Failed to establish initial login")
+	ErrorFailedRenew  = errors.New("Failed to establish renewed login")
+	ErrorInvalidCreds = errors.New("Invalid credentials for API login")
+	ErrorUnstarted    = errors.New("Successful login not yet achieved")
 )
+
+type LoginState int
+
+const (
+	// Unstarted reflects an uninitialized login state, typical of an
+	// asynchronous authentication environment
+	LoginUnstarted LoginState = iota
+	// Failed reflects a login that has never had a success
+	LoginFailed
+	// Active represents an active login token has been obtained, but makes
+	// no guarantees regarding revocation of said token
+	LoginActive
+	// Inactive represents a token that has expired without successfully
+	// being renewed with a new token (auto-refresh failure), exclusive of
+	// bad credentials
+	LoginInactive
+	// InvalidCreds is a non-temporary failed state, requiring new credential
+	// data to resolve
+	LoginInvalidCreds
+)
+
+// Intentionally not exposed for usage outside package
+func (ls LoginState) toError() error {
+	switch ls {
+	case LoginUnstarted:
+		return ErrorUnstarted
+	case LoginInvalidCreds:
+		return ErrorInvalidCreds
+	case LoginFailed:
+		return ErrorFailedLogin
+	case LoginInactive:
+		return ErrorFailedRenew
+	case LoginActive:
+		return nil
+	}
+	return fmt.Errorf("unhandled login state: %d", ls)
+}
 
 type ClusterState string
 

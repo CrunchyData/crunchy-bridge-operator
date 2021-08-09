@@ -58,7 +58,20 @@ func (c *Client) precheck() error {
 		c.client = &http.Client{}
 	}
 
-	return nil
+	// Verify login state
+	if ls := c.GetLoginState(); ls == LoginFailed || ls == LoginInactive {
+		// Make a login attempt on temp failure states before declaring a failure
+		primaryLogin.login()
+	}
+	return c.GetLoginState().toError()
+}
+
+func (c *Client) GetLoginState() LoginState {
+	if primaryLogin == nil {
+		return LoginUnstarted
+	} else {
+		return primaryLogin.State()
+	}
 }
 
 // helper to set up auth with current bearer token
@@ -348,7 +361,7 @@ func (c *Client) DeleteCluster(id string) error {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		c.Log.Info("unexpected status code from API(cluster delete)", "statusCode", resp.StatusCode)
 		return errors.New("unexpected response status from API")
 	}

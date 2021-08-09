@@ -17,6 +17,7 @@ package bridgeapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -26,7 +27,9 @@ import (
 const (
 	// refreshBuffer represents the time to attempt to refresh the login
 	// in seconds prior to expiration time
-	refreshBuffer = 5
+	refreshBuffer = 15
+	retryComm     = 2
+	retryCred     = 60
 )
 
 // TODO: move login manager from package global to client internal
@@ -36,7 +39,9 @@ type loginManager struct {
 	sync.RWMutex
 	activeToken  string
 	apiTarget    *url.URL
+	curState     LoginState
 	refreshTimer *time.Timer
+	expireTimer  *time.Timer
 	loginSource  CredentialProvider
 }
 
@@ -45,16 +50,30 @@ func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 		loginSource: cp,
 		apiTarget:   target,
 	}
-
 	lm.login()
 	return lm
 }
 
 func (lm *loginManager) login() {
-	creds := lm.loginSource.ProvideCredential()
+	creds, err := lm.loginSource.ProvideCredential()
+	if err != nil {
+		pkgLog.Error(err, "error retrieving credentials")
+		lm.setNextLogin(retryCred)
+		return
+	}
+	if creds.Zero() {
+		// Fast fail login process for unset credentials, may be expected
+		// depending on "eventual consistency" usage
+		pkgLog.Info("provided credentials currently blank")
+		lm.setNextLogin(retryCred)
+		return
+	}
+
 	req, err := http.NewRequest(http.MethodPost, lm.apiTarget.String()+"/token", nil)
 	if err != nil {
 		pkgLog.Error(err, "error creating token login request")
+		lm.setNextLogin(retryComm)
+		lm.failLoginTemp()
 		return
 	}
 	req.SetBasicAuth(creds.Key, creds.Secret)
@@ -63,29 +82,89 @@ func (lm *loginManager) login() {
 	resp, err := client.Do(req)
 	if err != nil {
 		pkgLog.Error(err, "error creating http client")
+		lm.setNextLogin(retryComm)
+		lm.failLoginTemp()
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+		pkgLog.Error(fmt.Errorf("API returned status %d for login [%s]", resp.StatusCode, creds.Key), "login failure")
+		lm.Lock()
+		lm.curState = LoginInvalidCreds
+		lm.Unlock()
+		lm.setNextLogin(retryCred)
+		return
+	} else if resp.StatusCode != http.StatusOK {
+		pkgLog.Error(
+			fmt.Errorf("API returned unexpected response %d for login [%s]", resp.StatusCode, creds.Key),
+			"unexpected login response")
+		lm.setNextLogin(retryComm)
+		lm.failLoginTemp()
+		return
+	}
 
 	var tr tokenResponse
 	err = json.NewDecoder(resp.Body).Decode(&tr)
 	if err != nil {
 		pkgLog.Error(err, "error unmarshaling token response body")
+		lm.setNextLogin(retryComm)
+		lm.failLoginTemp()
 		return
 	}
 
 	lm.Lock()
-	defer lm.Unlock()
 	lm.activeToken = tr.Token
+	lm.curState = LoginActive
+	lm.Unlock()
 
+	lm.setExpiration(tr.ExpiresIn)
+	lm.setNextLogin(tr.ExpiresIn - refreshBuffer)
+}
+
+func (lm *loginManager) failLoginTemp() {
+	lm.Lock()
+	defer lm.Unlock()
+
+	if lm.curState == LoginUnstarted {
+		lm.curState = LoginFailed
+	}
+}
+
+func (lm *loginManager) setNextLogin(sec int64) {
+	lm.Lock()
+	defer lm.Unlock()
 	// If refresh timer exists, clean it up before creating new
 	if lm.refreshTimer != nil {
-		if !lm.refreshTimer.Stop() {
-			// Drain channel before leaving to GC
-			<-lm.refreshTimer.C
-		}
+		lm.refreshTimer.Stop()
 	}
-	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(tr.ExpiresIn-refreshBuffer), lm.login)
+	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(sec), lm.login)
+}
+
+func (lm *loginManager) expireLogin() {
+	lm.Lock()
+	defer lm.Unlock()
+	lm.activeToken = ""
+	if lm.curState == LoginActive {
+		lm.curState = LoginInactive
+	}
+}
+
+func (lm *loginManager) setExpiration(sec int64) {
+	lm.Lock()
+	defer lm.Unlock()
+
+	// If expire timer exists, clean it up before creating new
+	if lm.expireTimer != nil {
+		lm.expireTimer.Stop()
+	}
+	lm.expireTimer = time.AfterFunc(time.Second*time.Duration(sec), lm.expireLogin)
+}
+
+func (lm *loginManager) State() LoginState {
+	lm.RLock()
+	defer lm.RUnlock()
+	return lm.curState
 }
 
 func (lm *loginManager) UpdateLogin(cp CredentialProvider) {
@@ -102,15 +181,13 @@ func (lm *loginManager) UpdateAuthURL(target *url.URL) {
 	lm.apiTarget = target
 }
 
-func SetLogin(cp CredentialProvider, authBaseURL *url.URL) error {
+func SetLogin(cp CredentialProvider, authBaseURL *url.URL) {
 	if primaryLogin == nil {
 		primaryLogin = newLoginManager(cp, authBaseURL)
 	} else {
 		primaryLogin.UpdateLogin(cp)
 		primaryLogin.UpdateAuthURL(authBaseURL)
 	}
-
-	return nil
 }
 
 type tokenResponse struct {
