@@ -37,8 +37,6 @@ const (
 
 var _ = Describe("CrunchyBridgeInventory controller", func() {
 
-	BeforeEach(func() {})
-	AfterEach(func() {})
 	Context("CrunchyBridgeInventories", func() {
 		It("Should create, update and delete inventory cr successfully", func() {
 

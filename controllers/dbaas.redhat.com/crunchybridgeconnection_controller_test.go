@@ -37,7 +37,6 @@ const (
 var _ = Describe("CrunchyBridgeConnection controller", func() {
 
 	Describe("CrunchyBridgeConnectionReconciler", func() {
-		BeforeEach(func() {})
 		AfterEach(assertResourceDeletion(connectionCR()))
 
 		Context("CrunchyBridgeConnection", func() {
