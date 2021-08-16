@@ -18,7 +18,7 @@
 
 **Run as a local instance**:
 
-- `make install run WATCH_NAMESPACE=<your_target_namespace>`
+- `make install run INSTALL_NAMESPACE=<your_target_namespace> `
 
 **Deploy & run on a cluster:**
 - `oc project <your_target_namespace>`
@@ -32,19 +32,60 @@
 - `make release catalog-update`
 - search the Crunchy Bridge Operator in OperatorHub, click on install.
 
-## Testing the Inventory and Connection CRs  
+## Test Database as a Service (DBaaS) on OpenShift  
 
-Note: you need Application ID and Application Secret, for creating a secret. See more, [API Reference](https://docs.crunchybridge.com/api/getting_started)
+The Crunchy Bridge Operator is integrated with the [Red Hat Database-as-a-Service (DBaaS) Operator](https://github.com/RHEcosystemAppEng/dbaas-operator) which allows application developers to import database instances and connect to the databases through the [Service Binding Operator](https://github.com/redhat-developer/service-binding-operator). More information can be found [here](https://github.com/RHEcosystemAppEng/dbaas-operator#readme).
 
-1. Create a Secret :
+Note that both the DBaaS Operator and Crunchy Bridge Operator should be installed through the [Operator Lifecyle Manager (OLM)](https://github.com/operator-framework/operator-lifecycle-manager).
+
+
+**1.** Check DBaaS Registration
+
+If the DBaaS Operator has been deployed in the OpenShift Cluster, the Crunchy Bridge Operator automatically creates a cluster level [DBaaSProvider](https://github.com/RHEcosystemAppEng/dbaas-operator/blob/main/config/crd/bases/dbaas.redhat.com_dbaasproviders.yaml) custom resource (CR) object `crunchy-bridge-registration` to automatically register itself with the DBaaS Operator.
+
+```
+apiVersion: dbaas.redhat.com/v1alpha1
+kind: DBaaSProvider
+metadata:
+  name: crunchy-bridge-registration
+  labels:
+    related-to: dbaas-operator
+    type: dbaas-provider-registration
+spec:
+  provider:
+    name: Red Hat DBaaS / Crunchy Bridge
+    displayName: Crunchy Bridge managed PostgreSQL
+    displayDescription: The Crunchy Bridge Fully Managed Postgres as a Service.
+    icon:
+      base64data: <>
+      mediatype: image/png
+  inventoryKind: CrunchyBridgeInventory
+  connectionKind: CrunchyBridgeConnection
+  credentialFields:
+    - key: publicApiKey
+      displayName: Public API Key
+      type: string
+      required: true
+    - key: privateApiSecret
+      displayName: Private API Secret
+      type: maskedstring
+      required: true
+```
+If the crunchy bridge Operator is undeployed with the OLM, the above registration CR gets cleaned up automatically.
+
+**2.** Creating a Secret 
+
+Administrator will first create the secret with Application ID and Application Secret, for creating a secret. See more, [API Reference](https://docs.crunchybridge.com/api/getting_started)
+
 ```
 kubectl create secret generic crunchy-bridge-api-key  --from-literal="publicApiKey=<Application ID>"   --from-literal="privateApiSecret=<Application Secret>"   -n crunchy-bridge-operator-system
 ```
-2. Create a `CrunchyBridgeInventory` Custom Resource
-```
-kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeinventory.yaml
-```
-The CRs status will be updated with list of clusters.
+**3.** Creating  `CrunchyBridgeInventory` Custom Resource
+
+Administrator will creates a [DBaaSInventory](https://github.com/RHEcosystemAppEng/dbaas-operator/blob/main/config/crd/bases/dbaas.redhat.com_dbaasinventories.yaml) CR for CrunchyBrige. 
+The DBaaS Operator automatically creates a CrunchyBridgeInventory CR, and the crunchy-bridge Operator discovers the clusters and  instances, and sets the result in the CR status.
+
+The CRs status will be updated with list of clusters, as seen below
 
 example: 
 ```
@@ -64,13 +105,13 @@ Instances:
     Name:             sampledatabasse
 
 ```
-3. Get cluster instance ID from Step 2 CR status and specify a cluster instance ID in `CrunchyBridgeConnection` Custom Resource and run the below command.
-  ```
-  kubectl apply -f config/samples/dbaas.redhat.com_v1alpha1_crunchybridgeconnection.yaml
- ``` 
-The CRs status will be updated with connection details of specified instance ID. 
+**3.** Creating `CrunchyBridgeConnection` Custom resource
 
-example:
+Now the application developer can create a [DBaaSConnection](https://github.com/RHEcosystemAppEng/dbaas-operator/blob/main/config/crd/bases/dbaas.redhat.com_dbaasconnections.yaml) CR
+for connection to the Crunchy database instance using from the list of instances, the DBaaS Operator automatically creates CrunchyBridgeConnection 
+CR. The crunchy Operator stores the db user credentials in a kubernetes secret, and the remaining connection information in a configmap, and then updates the CrunchyBridgeConnection CR status.
+
+The CRs status will be updated with connection details of specified instance ID as seen example:
 ```
   connectionInfoRef:
    name: crunchy-bridge-db-conn-cm-k8rkv // name of configmap contains connection info like host, port, datbase name
