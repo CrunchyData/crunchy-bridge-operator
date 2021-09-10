@@ -37,12 +37,13 @@ var primaryLogin *loginManager
 
 type loginManager struct {
 	sync.RWMutex
-	activeToken  string
-	apiTarget    *url.URL
-	curState     LoginState
-	refreshTimer *time.Timer
-	expireTimer  *time.Timer
-	loginSource  CredentialProvider
+	activeToken   string
+	activeTokenID string
+	apiTarget     *url.URL
+	curState      LoginState
+	refreshTimer  *time.Timer
+	expireTimer   *time.Timer
+	loginSource   CredentialProvider
 }
 
 func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
@@ -115,6 +116,7 @@ func (lm *loginManager) login() {
 
 	lm.Lock()
 	lm.activeToken = tr.Token
+	lm.activeTokenID = tr.TokenID
 	lm.curState = LoginActive
 	lm.Unlock()
 
@@ -148,6 +150,44 @@ func (lm *loginManager) expireLogin() {
 	if lm.curState == LoginActive {
 		lm.curState = LoginInactive
 	}
+}
+
+func (lm *loginManager) reset() {
+	lm.Lock()
+	defer lm.Unlock()
+
+	lm.loginSource = LoginCred{}
+	if lm.refreshTimer != nil {
+		lm.refreshTimer.Stop()
+	}
+	if lm.expireTimer != nil {
+		lm.expireTimer.Stop()
+	}
+	lm.curState = LoginUnstarted
+	lm.activeToken = ""
+	lm.activeTokenID = ""
+}
+
+func (lm *loginManager) logout() {
+	lm.Lock()
+	defer lm.Unlock()
+
+	if lm.refreshTimer != nil {
+		lm.refreshTimer.Stop()
+	}
+	if lm.expireTimer != nil {
+		lm.expireTimer.Stop()
+	}
+	lm.curState = LoginInactive
+	lm.activeToken = ""
+	lm.activeTokenID = ""
+}
+
+func (lm *loginManager) token() string {
+	lm.RLock()
+	defer lm.Unlock()
+
+	return lm.activeToken
 }
 
 func (lm *loginManager) setExpiration(sec int64) {
@@ -190,7 +230,23 @@ func SetLogin(cp CredentialProvider, authBaseURL *url.URL) {
 	}
 }
 
+// Resets the LoginManager state to nearly new, ready for a new SetLogin call
+func UnsetLogin() {
+	if primaryLogin != nil {
+		primaryLogin.reset()
+	}
+}
+
+// "Logs out" by forgetting login state and resetting timers to await next
+// login call
+func Logout() {
+	if primaryLogin != nil {
+		primaryLogin.logout()
+	}
+}
+
 type tokenResponse struct {
 	Token     string `json:"access_token"`
 	ExpiresIn int64  `json:"expires_in"`
+	TokenID   string `json:"id"`
 }

@@ -76,7 +76,7 @@ func (c *Client) GetLoginState() LoginState {
 
 // helper to set up auth with current bearer token
 func setBearer(req *http.Request) {
-	req.Header.Set("Authorization", "Bearer "+primaryLogin.activeToken)
+	req.Header.Set("Authorization", "Bearer "+primaryLogin.token())
 }
 
 func (c *Client) CreateCluster(cr CreateRequest) error {
@@ -367,4 +367,50 @@ func (c *Client) DeleteCluster(id string) error {
 	}
 
 	return nil
+}
+
+// PersonalTeamID returns the team id for the caller's personal team to use
+// as the default in creation requests
+func (c *Client) PersonalTeamID() (string, error) {
+	if err := c.precheck(); err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeTeams, nil)
+	if err != nil {
+		c.Log.Error(err, "during list teams prep")
+		return "", err
+	}
+	setBearer(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		c.Log.Error(err, "during list teams")
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.Log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		return "", errors.New("unexpected response status from API")
+	}
+
+	var teamList struct {
+		Teams []struct {
+			ID         string `json:"id"`
+			IsPersonal bool   `json:"is_personal"`
+		}
+	}
+	err = json.NewDecoder(resp.Body).Decode(&teamList)
+	if err != nil && teamList.Teams != nil {
+		c.Log.Error(err, "error unmarshaling response body for team list")
+		return "", err
+	}
+
+	for _, team := range teamList.Teams {
+		if team.IsPersonal {
+			return team.ID, nil
+		}
+	}
+	return "", errors.New("unable to identify personal team")
 }

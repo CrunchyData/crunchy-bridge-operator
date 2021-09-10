@@ -22,7 +22,7 @@ spec:
         description: BridgeCluster is the Schema for the bridgeclusters API
         properties:
           apiVersion:
-            description: 'defines the versioned schema of this representation
+            description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
@@ -41,33 +41,39 @@ spec:
                   high availability
                 type: boolean
               name:
-                description: represents the cluster name within Crunchy Bridge,
-                  must be unique per team
+                description: represents the cluster name within Crunchy Bridge, must
+                  be unique per team
+                minLength: 5
                 type: string
               pg_major_version:
                 description: selects the major version of PostgreSQL to deploy (e.g.
                   12, 13)
+                minimum: 12
                 type: integer
               plan:
-                description: identifies the Crunchy Bridge provioning plan (e.g.
-                  hobby-2, standard-8)
+                description: identifies the Crunchy Bridge provioning plan (e.g. hobby-2,
+                  standard-8)
                 type: string
               provider:
-                description: identifies the desired cloud infrastructure
-                  provider (e.g. aws, gcp, azure)
+                description: identifies the desired cloud infrastructure provider
+                enum:
+                - aws
+                - gcp
+                - azure
                 type: string
               region:
-                description: identifies the requested deployment region within
-                  the provider (e.g. us-east-1)
+                description: identifies the requested deployment region within the
+                  provider (e.g. us-east-1)
                 type: string
               storage:
-                description: identifies the size of PostgreSQL database volume
-                  in megabytes
+                description: identifies the size of PostgreSQL database volume in
+                  megabytes
+                maximum: 65535
+                minimum: 10
                 type: integer
               team_id:
-                description: 'identifies the target team in which to create
-                  the cluster. Optional: defaults to the personal team of the operator''s
-                  Crunchy Bridge account'
+                description: identifies the target team in which to create the cluster.
+                  Defaults to the personal team of the operator's Crunchy Bridge account
                 type: string
             required:
             - name
@@ -84,50 +90,43 @@ spec:
                 description: represents cluster detail from Crunchy Bridge
                 properties:
                   cpu:
-                    description: "represents the plan-allocated CPUs for
-                      the cluster"
+                    description: represents the plan-allocated CPUs for the cluster
                     type: integer
                   created_at:
-                    description: 'represents the cluster creation time
-                      as known to Crunchy Bridge'
+                    description: represents the cluster creation time as known to
+                      Crunchy Bridge
                     type: string
                   ha_enabled:
-                    description: represents whether the cluster has high
-                      availability enabled
+                    description: represents whether the cluster has high availability
+                      enabled
                     type: boolean
                   id:
-                    description: "represents the Crunchy Bridge cluster
-                      identifier"
+                    description: represents the Crunchy Bridge cluster identifier
                     type: string
                   major_version:
-                    description: represents the PostgreSQL major version
-                      number
+                    description: represents the PostgreSQL major version number
                     type: integer
                   memory:
-                    description: represents the plan-allocated memory in
-                      gigabytes
+                    description: represents the plan-allocated memory in gigabytes
                     type: integer
                   name:
-                    description: represents the cluster name provided in the
-                      request
+                    description: represents the cluster name provided in the request
                     type: string
                   provider_id:
-                    description: represents the infrastructure provider
-                      for the cluster
+                    description: represents the infrastructure provider for the cluster
                     type: string
                   region_id:
                     description: represents the region location for the cluster
                     type: string
                   storage:
-                    description: represents the database volume size in
-                      megabytes
+                    description: represents the database volume size in megabytes
                     type: integer
                   team_id:
                     description: represents the ID of the team which owns the cluster
                     type: string
                   updated_at:
-                    description: 'represents the last change time internal
-                      to Crunchy Bridge'
+                    description: represents the last change time internal to Crunchy
+                      Bridge
                     type: string
                 required:
                 - cpu
@@ -144,21 +143,21 @@ spec:
                 - updated_at
                 type: object
               connection:
-                description: Connect provides non-user specific connection information
+                description: provides non-user specific connection information
                 properties:
                   connect_string:
-                    description: 'URI represents the database connection string without
-                      user information (e.g.postgres://p.fepkwudi6.example.com:5432/postgres)'
-                   type: string
+                    description: represents the database connection string without
+                      user information (e.g.postgres://p.fepkwudi6.example.com:5432/postgres)
+                    type: string
                   database_name:
-                    description: DatabaseName names the initial database created with
-                      the cluster
+                    description: identifies the initial database created with the
+                      cluster
                     type: string
                   parent_db_role:
-                    description: Parent DB role identifies the name of the database
-                      role from which bound user accounts inherit their permissions.
-                      Applications should use SET ROLE to ensure DDL executed can
-                      be shared among binding roles
+                    description: identifies the name of the database role from which
+                      bound user accounts inherit their permissions. Applications
+                      should use SET ROLE to ensure DDL executed can be shared among
+                      binding roles
                     type: string
                 required:
                 - connect_string
@@ -166,12 +165,12 @@ spec:
                 - parent_db_role
                 type: object
               last_update:
-                description: 'Updated is the last status update from the controller,
-                  does not correlate to cluster.updated_at'
+                description: last status update from the controller, does not correlate
+                  to cluster.updated_at
                 type: string
               phase:
-                description: 'Phase represents the cluster creation phase:   pending
-                  - creation not yet started   creating - provisioning in progress   ready
+                description: 'represents the cluster creation phase:     pending -
+                  creation not yet started     creating - provisioning in progress     ready
                   - cluster provisioning complete'
                 type: string
             required:

@@ -18,25 +18,30 @@ package main
 
 import (
 	"flag"
-	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
-	"k8s.io/client-go/kubernetes"
+	"net/url"
 	"os"
+	"strings"
+	"time"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
-	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	crunchybridgecontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/crunchybridge"
-	dbaasredhatcomcontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/dbaas.redhat.com"
+
 	//+kubebuilder:scaffold:imports
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
 )
 
 var (
@@ -48,17 +53,27 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(crunchybridgev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dbaasredhatcomv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dbaasoperator.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
+type mainConfig struct {
+	apiURL    string
+	clientset *kubernetes.Clientset
+}
+
+var dbaasInit func(ctrl.Manager, mainConfig)
+
 func main() {
-	var metricsAddr string
+	// Variables from boilerplate
+	var metricsAddr, probeAddr string
 	var enableLeaderElection bool
-	var probeAddr string
+
 	var crunchybridgeAPIURL string
-	flag.StringVar(&crunchybridgeAPIURL, "crunchybridgeapi-url", "https://api.crunchybridge.com", "the Crunchy bridge API URL (no slash in the end).")
+	// Namespace and Name for APIKey secret default values
+	credNamespace := "default"
+	credName := "crunchybridge_api_key"
+
+	flag.StringVar(&crunchybridgeAPIURL, "crunchybridgeapi-url", "https://api.crunchybridge.com", "the Crunchy bridge API URL")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -71,6 +86,14 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Pull optional configuration details from env
+	if cns, ok := os.LookupEnv("API_CRED_NS"); ok {
+		credNamespace = cns
+	}
+	if cn, ok := os.LookupEnv("API_CRED_NAME"); ok {
+		credName = cn
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -90,9 +113,58 @@ func main() {
 		setupLog.Error(err, "unable to create clientset")
 		os.Exit(1)
 	}
+
+	crunchybridgeAPIURL = strings.TrimRight(crunchybridgeAPIURL, "/")
+
+	var bridgeClient *bridgeapi.Client
+
+	// Set up manager with DBaaS controllers if built with option
+	if dbaasInit != nil {
+		dbaasInit(mgr, mainConfig{
+			apiURL:    crunchybridgeAPIURL,
+			clientset: clientset,
+		})
+
+		// Uses the side effect of DBaaSProvider's initialization of shared
+		// package-level login to ensure credProvider matches that configured
+		// for DBaaS-related controllers
+		bridgeClient = bridgeapi.NewClient()
+	} else {
+		// Create client directly for querying non-managed object
+		client, err := ctrlclient.New(mgr.GetConfig(), ctrlclient.Options{})
+		if err != nil {
+			setupLog.Error(err, "failed to init client to get api credentials")
+			os.Exit(1)
+		}
+
+		// Initialize credential provider from environment
+		ksp := &kubeadapter.KubeSecretCredentialProvider{
+			Client:      client,
+			Namespace:   credNamespace,
+			Name:        credName,
+			KeyField:    "api_key",
+			SecretField: "api_secret",
+		}
+
+		apiURL, err := url.Parse(crunchybridgeAPIURL)
+		if err != nil {
+			setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
+			os.Exit(1)
+		}
+
+		bridgeapi.SetLogin(ksp, apiURL)
+		// Presently not different from prior block, but will likely change
+		// in the future and documents this client having a
+		// different package global state than prior block
+		bridgeClient = bridgeapi.NewClient()
+		bridgeClient.APITarget = apiURL
+	}
+
 	if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		BridgeClient: bridgeClient,
+		WatchInt:     10 * time.Second,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
 		os.Exit(1)
@@ -105,38 +177,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	inventoryReconciler := &dbaasredhatcomcontrollers.CrunchyBridgeInventoryReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		APIBaseURL: crunchybridgeAPIURL,
-	}
-
-	if err = inventoryReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInventory")
-		os.Exit(1)
-	}
-
-	dbaaSProviderReconciler := &dbaasredhatcomcontrollers.DBaaSProviderReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Log:       setupLog,
-		Clientset: clientset,
-	}
-
-	if err = dbaaSProviderReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DBaaSProvider")
-		os.Exit(1)
-	}
-
-	if err = (&dbaasredhatcomcontrollers.CrunchyBridgeConnectionReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Clientset:  clientset,
-		APIBaseURL: crunchybridgeAPIURL,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeConnection")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -35,25 +35,23 @@ spec:
             description: DatabaseRoleSpec defines the desired state of DatabaseRole
             properties:
               cluster_id:
-                description: ClusterID identifies the cluster on which this role exists
+                description: identifies the cluster on which this role exists
                 type: string
               role_name:
-                description: RoleName (OPTIONAL) identifies the requested role name,
-                  defaults to a system-generated name if not provided
+                description: identifies the requested role name, defaults to a system-generated
+                  name if not provided
                 type: string
             required:
             - cluster_id
-            - role_name
             type: object
           status:
             description: DatabaseRoleStatus defines the observed state of DatabaseRole
             properties:
               created_at:
-                description: Created represents the creation time for the role
+                description: represents the creation time for the role
                 type: string
               credential_ref:
-                description: CredentialRef represents the secret associated with this
-                  role
+                description: represents the secret associated with this role
                 properties:
                   name:
                     type: string
@@ -64,10 +62,10 @@ spec:
                 - namespace
                 type: object
               phase:
-                description: Phase represents the creation state of the request
+                description: represents the creation state of the request
                 type: string
               role_name:
-                description: RoleName represents the role provisioned for this request
+                description: represents the role provisioned for this request
                 type: string
             required:
             - created_at

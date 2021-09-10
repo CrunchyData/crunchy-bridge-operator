@@ -11,7 +11,12 @@ metadata:
             "name": "bridgecluster-sample"
           },
           "spec": {
-            "foo": "bar"
+            "name": "TestCluster",
+            "pg_major_version": 12,
+            "plan": "hobby-2",
+            "provider": "aws",
+            "region": "us-east-1",
+            "storage": 10
           }
         },
         {

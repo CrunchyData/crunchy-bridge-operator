@@ -94,31 +94,21 @@ type ClusterList struct {
 }
 
 type ClusterDetail struct {
-	CPU              int              `json:"cpu"`
-	Created          time.Time        `json:"created_at"`
-	ID               string           `json:"id"`
-	HighAvailability bool             `json:"is_ha"`
-	PGMajorVersion   int              `json:"major_version"`
-	MemoryGB         int              `json:"memory"`
-	Name             string           `json:"name"`
-	OldestBackup     time.Time        `json:"oldest_backup"`
-	ProviderID       string           `json:"provider_id"`
-	RegionID         string           `json:"region_id"`
-	State            string           `json:"state"` // Leave as string until graceful error handling
-	StorageMB        int              `json:"storage"`
-	TeamID           string           `json:"team_id"`
-	Updated          time.Time        `json:"updated_at"`
-	Instances        []InstanceDetail `json:"instances"` // From single-cluster detail
-	Replicas         []ClusterDetail  `json:"replicas"`  // From cluster listing
-}
-
-type InstanceDetail struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	ProviderID string `json:"provider_id"`
-	RegionID   string `json:"region_id"`
-	Type       string `json:"type"` // primary, read_replica
-	URL        string `json:"url"`
+	CPU              int             `json:"cpu"`
+	Created          time.Time       `json:"created_at"`
+	ID               string          `json:"id"`
+	HighAvailability bool            `json:"is_ha"`
+	PGMajorVersion   int             `json:"major_version"`
+	MemoryGB         int             `json:"memory"`
+	Name             string          `json:"name"`
+	OldestBackup     time.Time       `json:"oldest_backup"`
+	ProviderID       string          `json:"provider_id"`
+	RegionID         string          `json:"region_id"`
+	State            string          `json:"state"` // Leave as string until graceful error handling
+	StorageMB        int             `json:"storage"`
+	TeamID           string          `json:"team_id"`
+	Updated          time.Time       `json:"updated_at"`
+	Replicas         []ClusterDetail `json:"replicas"`
 }
 
 type ConnectionRole struct {
