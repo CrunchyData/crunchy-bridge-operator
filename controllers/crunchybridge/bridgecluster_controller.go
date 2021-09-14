@@ -79,6 +79,7 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// Cluster deletion request / process finalizer
 		if listContains(clusterObj.Finalizers, bcFinalizer) {
 			if id := clusterObj.Status.Cluster.ID; id != "" {
+				logger.Info("deleting cluster", "id", id)
 				if err := r.BridgeClient.DeleteCluster(id); err != nil {
 					return ctrl.Result{}, err
 				}
@@ -91,7 +92,6 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	} else {
 		switch clusterObj.Status.Phase {
 		case crunchybridgev1alpha1.PhaseUnknown:
-			fmt.Printf("Phase: Unknown\n")
 			// New object, add our finalizer
 			if !listContains(clusterObj.Finalizers, bcFinalizer) {
 				controllerutil.AddFinalizer(clusterObj, bcFinalizer)
@@ -108,12 +108,12 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 
 		case crunchybridgev1alpha1.PhasePending:
-			fmt.Printf("Phase: Pending\n")
 			req, err := r.createFromSpec(clusterObj.Spec)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 
+			logger.Info("cluster create requested", "name", clusterObj.Spec.Name)
 			if err := r.BridgeClient.CreateCluster(req); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -126,7 +126,6 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 
 		case crunchybridgev1alpha1.PhaseCreating:
-			fmt.Printf("Phase: %s - ver: %s\n", clusterObj.Status.Phase, clusterObj.ResourceVersion)
 			var detC bridgeapi.ClusterDetail
 			if cid := clusterObj.Status.Cluster.ID; cid == "" {
 				c, err := r.BridgeClient.ClusterByName(clusterObj.Spec.Name)
@@ -148,6 +147,7 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 			if readyNow := (detC.State == string(bridgeapi.StateReady)); readyNow {
 				clusterObj.Status.Phase = crunchybridgev1alpha1.PhaseReady
+				logger.Info("cluster created", "name", clusterObj.Spec.Name)
 			}
 
 			clusterObj.Status.Updated = time.Now().Format(time.RFC3339)
@@ -157,7 +157,6 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{Requeue: true, RequeueAfter: r.WatchInt}, nil
 
 		case crunchybridgev1alpha1.PhaseReady:
-			fmt.Printf("Phase: Ready\n")
 			// TODO: Monitor changes, change state machine (phoenix)
 
 		default:
@@ -165,9 +164,6 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 	}
-
-	// Perform create
-	// Set status info
 
 	return ctrl.Result{}, nil
 }
@@ -243,7 +239,7 @@ func (r *BridgeClusterReconciler) updateStatusFromDetail(
 	statusObj.Cluster.RegionID = det.RegionID
 
 	if role, err := r.BridgeClient.DefaultConnRole(det.ID); err != nil {
-		fmt.Printf("Unable to get connection role: %v\n", err)
+		return fmt.Errorf("Unable to get connection role: %w\n", err)
 	} else {
 		dbURL, err := url.Parse(role.URI)
 		if err != nil {
