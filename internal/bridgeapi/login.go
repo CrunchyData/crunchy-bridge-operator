@@ -185,7 +185,7 @@ func (lm *loginManager) logout() {
 
 func (lm *loginManager) token() string {
 	lm.RLock()
-	defer lm.Unlock()
+	defer lm.RUnlock()
 
 	return lm.activeToken
 }
