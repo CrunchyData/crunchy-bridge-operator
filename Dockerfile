@@ -11,6 +11,7 @@ RUN go mod download
 
 # Copy the go source
 COPY main.go main.go
+COPY dbaas_support.go dbaas_support.go
 COPY apis/ apis/
 COPY controllers/ controllers/
 COPY internal/ internal/
