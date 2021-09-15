@@ -63,6 +63,9 @@ all: build
 .PHONY: release
 release: build generate bundle docker-build docker-push bundle-build bundle-push catalog-build catalog-push
 
+# Go build time tags, 'dbaas' enables DBaaS extension
+GOTAGS?=dbaas
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -101,11 +104,11 @@ test: manifests generate fmt vet ## Run tests.
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+build: generate fmt vet ## Build manager binary, do not explicitly list files so build flags do their job.
+	go build -tags '${GOTAGS}' -o bin/manager
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run ./main.go ./dbaas_support.go
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .

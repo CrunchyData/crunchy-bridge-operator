@@ -11,12 +11,13 @@ RUN go mod download
 
 # Copy the go source
 COPY main.go main.go
+COPY dbaas_support.go dbaas_support.go
 COPY apis/ apis/
 COPY controllers/ controllers/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags 'dbaas' -o manager
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

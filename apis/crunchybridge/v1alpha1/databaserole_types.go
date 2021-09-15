@@ -27,10 +27,11 @@ import (
 type DatabaseRoleSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// ClusterID identifies the cluster on which this role exists
+	// identifies the cluster on which this role exists
 	ClusterID string `json:"cluster_id"`
-	// RoleName (OPTIONAL) identifies the requested role name, defaults to
-	// a system-generated name if not provided
+	// identifies the requested role name, defaults to a system-generated
+	// name if not provided
+	// +optional
 	RoleName string `json:"role_name"`
 }
 
@@ -38,14 +39,13 @@ type DatabaseRoleSpec struct {
 type DatabaseRoleStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Phase represents the creation state of the request
+	// represents the creation state of the request
 	Phase string `json:"phase"`
-	// Created represents the creation time for the role
-	// TODO: Can this be moved to time.Time?
+	// represents the creation time for the role
 	Created string `json:"created_at"`
-	// RoleName represents the role provisioned for this request
+	// represents the role provisioned for this request
 	RoleName string `json:"role_name"`
-	// CredentialRef represents the secret associated with this role
+	// represents the secret associated with this role
 	CredentialRef NamespacedName `json:"credential_ref"`
 }
 
