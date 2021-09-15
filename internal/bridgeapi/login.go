@@ -63,7 +63,6 @@ func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 }
 
 func (lm *loginManager) login() {
-	fmt.Printf("Attempting login (%s)\n", time.Now().Format(time.RFC3339Nano))
 	creds, err := lm.loginSource.ProvideCredential()
 	if err != nil {
 		pkgLog.Error(err, "error retrieving credentials")

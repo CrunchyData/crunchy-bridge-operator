@@ -59,7 +59,7 @@ func (c *Client) precheck() error {
 	}
 
 	// Verify login state
-	if ls := c.GetLoginState(); ls == LoginFailed || ls == LoginInactive {
+	if ls := c.GetLoginState(); ls == LoginFailed || ls == LoginInactive || ls == LoginUnstarted {
 		// Make a login attempt on temp failure states before declaring a failure
 		primaryLogin.login()
 	}
