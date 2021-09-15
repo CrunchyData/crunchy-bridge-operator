@@ -96,7 +96,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 			return ctrl.Result{Requeue: true}, statusErr
 		}
 		logger.Error(err, "Error while setting up CrunchyBridge Client")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 
 	logger.Info("Crunchy Bridge Client Configured ")
