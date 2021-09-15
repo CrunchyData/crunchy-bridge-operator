@@ -22,14 +22,14 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/jpillora/backoff"
 )
 
 const (
 	// refreshBuffer represents the time to attempt to refresh the login
 	// in seconds prior to expiration time
 	refreshBuffer = 15
-	retryComm     = 2
-	retryCred     = 60
 )
 
 // TODO: move login manager from package global to client internal
@@ -44,36 +44,44 @@ type loginManager struct {
 	refreshTimer  *time.Timer
 	expireTimer   *time.Timer
 	loginSource   CredentialProvider
+	retryDelay    backoff.Backoff
 }
 
 func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 	lm := &loginManager{
 		loginSource: cp,
 		apiTarget:   target,
+		retryDelay: backoff.Backoff{
+			Min:    500 * time.Millisecond,
+			Max:    3600 * time.Second,
+			Factor: 2,
+			Jitter: true,
+		},
 	}
 	lm.login()
 	return lm
 }
 
 func (lm *loginManager) login() {
+	fmt.Printf("Attempting login (%s)\n", time.Now().Format(time.RFC3339Nano))
 	creds, err := lm.loginSource.ProvideCredential()
 	if err != nil {
 		pkgLog.Error(err, "error retrieving credentials")
-		lm.setNextLogin(retryCred)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		return
 	}
 	if creds.Zero() {
 		// Fast fail login process for unset credentials, may be expected
 		// depending on "eventual consistency" usage
 		pkgLog.Info("provided credentials currently blank")
-		lm.setNextLogin(retryCred)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodPost, lm.apiTarget.String()+"/token", nil)
 	if err != nil {
 		pkgLog.Error(err, "error creating token login request")
-		lm.setNextLogin(retryComm)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		lm.failLoginTemp()
 		return
 	}
@@ -83,7 +91,7 @@ func (lm *loginManager) login() {
 	resp, err := client.Do(req)
 	if err != nil {
 		pkgLog.Error(err, "error creating http client")
-		lm.setNextLogin(retryComm)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		lm.failLoginTemp()
 		return
 	}
@@ -94,13 +102,13 @@ func (lm *loginManager) login() {
 		lm.Lock()
 		lm.curState = LoginInvalidCreds
 		lm.Unlock()
-		lm.setNextLogin(retryCred)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		return
 	} else if resp.StatusCode != http.StatusOK {
 		pkgLog.Error(
 			fmt.Errorf("API returned unexpected response %d for login [%s]", resp.StatusCode, creds.Key),
 			"unexpected login response")
-		lm.setNextLogin(retryComm)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		lm.failLoginTemp()
 		return
 	}
@@ -109,7 +117,7 @@ func (lm *loginManager) login() {
 	err = json.NewDecoder(resp.Body).Decode(&tr)
 	if err != nil {
 		pkgLog.Error(err, "error unmarshaling token response body")
-		lm.setNextLogin(retryComm)
+		lm.setNextLogin(lm.retryDelay.Duration())
 		lm.failLoginTemp()
 		return
 	}
@@ -118,10 +126,11 @@ func (lm *loginManager) login() {
 	lm.activeToken = tr.Token
 	lm.activeTokenID = tr.TokenID
 	lm.curState = LoginActive
+	lm.retryDelay.Reset()
 	lm.Unlock()
 
 	lm.setExpiration(tr.ExpiresIn)
-	lm.setNextLogin(tr.ExpiresIn - refreshBuffer)
+	lm.setNextLogin(time.Duration(tr.ExpiresIn-refreshBuffer) * time.Second)
 }
 
 func (lm *loginManager) failLoginTemp() {
@@ -133,14 +142,14 @@ func (lm *loginManager) failLoginTemp() {
 	}
 }
 
-func (lm *loginManager) setNextLogin(sec int64) {
+func (lm *loginManager) setNextLogin(delay time.Duration) {
 	lm.Lock()
 	defer lm.Unlock()
 	// If refresh timer exists, clean it up before creating new
 	if lm.refreshTimer != nil {
 		lm.refreshTimer.Stop()
 	}
-	lm.refreshTimer = time.AfterFunc(time.Second*time.Duration(sec), lm.login)
+	lm.refreshTimer = time.AfterFunc(delay, lm.login)
 }
 
 func (lm *loginManager) expireLogin() {
@@ -166,6 +175,7 @@ func (lm *loginManager) reset() {
 	lm.curState = LoginUnstarted
 	lm.activeToken = ""
 	lm.activeTokenID = ""
+	lm.retryDelay.Reset()
 }
 
 func (lm *loginManager) logout() {
@@ -181,6 +191,7 @@ func (lm *loginManager) logout() {
 	lm.curState = LoginInactive
 	lm.activeToken = ""
 	lm.activeTokenID = ""
+	lm.retryDelay.Reset()
 }
 
 func (lm *loginManager) token() string {

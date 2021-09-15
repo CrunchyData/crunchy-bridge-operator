@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/RHEcosystemAppEng/dbaas-operator v1.0.0
 	github.com/go-logr/logr v0.4.0
+	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
 	k8s.io/api v0.20.2
