@@ -160,39 +160,6 @@ func (lm *loginManager) expireLogin() {
 	}
 }
 
-func (lm *loginManager) reset() {
-	lm.Lock()
-	defer lm.Unlock()
-
-	lm.loginSource = LoginCred{}
-	if lm.refreshTimer != nil {
-		lm.refreshTimer.Stop()
-	}
-	if lm.expireTimer != nil {
-		lm.expireTimer.Stop()
-	}
-	lm.curState = LoginUnstarted
-	lm.activeToken = ""
-	lm.activeTokenID = ""
-	lm.retryDelay.Reset()
-}
-
-func (lm *loginManager) logout() {
-	lm.Lock()
-	defer lm.Unlock()
-
-	if lm.refreshTimer != nil {
-		lm.refreshTimer.Stop()
-	}
-	if lm.expireTimer != nil {
-		lm.expireTimer.Stop()
-	}
-	lm.curState = LoginInactive
-	lm.activeToken = ""
-	lm.activeTokenID = ""
-	lm.retryDelay.Reset()
-}
-
 func (lm *loginManager) token() string {
 	lm.RLock()
 	defer lm.RUnlock()
@@ -237,21 +204,6 @@ func SetLogin(cp CredentialProvider, authBaseURL *url.URL) {
 	} else {
 		primaryLogin.UpdateLogin(cp)
 		primaryLogin.UpdateAuthURL(authBaseURL)
-	}
-}
-
-// Resets the LoginManager state to nearly new, ready for a new SetLogin call
-func UnsetLogin() {
-	if primaryLogin != nil {
-		primaryLogin.reset()
-	}
-}
-
-// "Logs out" by forgetting login state and resetting timers to await next
-// login call
-func Logout() {
-	if primaryLogin != nil {
-		primaryLogin.logout()
 	}
 }
 
