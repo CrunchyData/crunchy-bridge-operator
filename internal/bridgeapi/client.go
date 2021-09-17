@@ -32,51 +32,83 @@ var (
 	routeTeams       string = "/teams"
 )
 
-// Leave open configuration for eventual-consistency scenario
+type ClientOption func(*Client)
+
 type Client struct {
-	APITarget *url.URL
-	Log       logr.Logger
-	client    *http.Client
+	apiTarget  *url.URL
+	authTarget *url.URL
+	log        logr.Logger
+	client     *http.Client
+	session    *loginManager
 }
 
-// NewClient returns a client initialized with the package logger as the
-// default logger and an uninitialized APITarget for late binding
-func NewClient() *Client {
-	client := &Client{
-		Log: pkgLog,
+func NewClient(apiURL *url.URL, cp CredentialProvider, opts ...ClientOption) (*Client, error) {
+	if apiURL == nil {
+		return nil, errors.New("cannot create client to nil URL target")
 	}
-	return client
+
+	// Defaults unless overridden by options
+	c := &Client{
+		apiTarget:  apiURL,
+		authTarget: apiURL,
+		log:        logr.Discard(),
+		client:     &http.Client{},
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	if sess, err := sessionCache.GetSession(c.authTarget, cp, c.log); err != nil {
+		return nil, err
+	} else {
+		c.session = sess
+	}
+
+	fmt.Printf("Session state: %#v\n", c.session)
+	return c, nil
+}
+
+// SetAuthURL allows setting a different authentication provider URL if
+// different from the API URL, defaults to the API URL provided in NewClient
+func SetAuthURL(authURL *url.URL) ClientOption {
+	return func(c *Client) {
+		c.authTarget = authURL
+	}
+}
+
+func SetLogger(logger logr.Logger) ClientOption {
+	return func(c *Client) {
+		c.log = logger
+	}
+}
+
+// SetHTTPClient allows the use of a custom-configured HTTP client for API
+// requests, Client defaults to a default http.Client{} otherwise
+func SetHTTPClient(hc *http.Client) ClientOption {
+	return func(c *Client) {
+		c.client = hc
+	}
 }
 
 func (c *Client) precheck() error {
-	if c.APITarget == nil {
-		return ErrorAPIUnset
+	// Attempt to refresh login state if inactive (and not bad creds)
+	if c.session != nil {
+		c.session.Ping()
+	} else {
+		return errors.New("nil session - WTF?!")
 	}
 
-	// Lazy initialization
-	if c.client == nil {
-		c.client = &http.Client{}
-	}
-
-	// Verify login state
-	if ls := c.GetLoginState(); ls == LoginFailed || ls == LoginInactive || ls == LoginUnstarted {
-		// Make a login attempt on temp failure states before declaring a failure
-		primaryLogin.login()
-	}
 	return c.GetLoginState().toError()
 }
 
 func (c *Client) GetLoginState() LoginState {
-	if primaryLogin == nil {
-		return LoginUnstarted
-	} else {
-		return primaryLogin.State()
-	}
+	return c.session.State()
 }
 
 // helper to set up auth with current bearer token
-func setBearer(req *http.Request) {
-	req.Header.Set("Authorization", "Bearer "+primaryLogin.token())
+func (c *Client) setBearer(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+c.session.token())
 }
 
 func (c *Client) CreateCluster(cr CreateRequest) error {
@@ -87,16 +119,16 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 
 	reqPayload := new(bytes.Buffer)
 	json.NewEncoder(reqPayload).Encode(cr)
-	req, err := http.NewRequest(http.MethodPost, c.APITarget.String()+routeClusters, reqPayload)
+	req, err := http.NewRequest(http.MethodPost, c.apiTarget.String()+routeClusters, reqPayload)
 	if err != nil {
-		c.Log.Error(err, "during create cluster request")
+		c.log.Error(err, "during create cluster request")
 		return err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during create cluster")
+		c.log.Error(err, "during create cluster")
 		return err
 	}
 	defer resp.Body.Close()
@@ -109,7 +141,7 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 	case http.StatusConflict:
 		return ErrorConflict
 	default:
-		c.Log.Info("unrecognized return status from create call", "statusCode", resp.StatusCode)
+		c.log.Info("unrecognized return status from create call", "statusCode", resp.StatusCode)
 		return nil
 	}
 }
@@ -144,29 +176,29 @@ func (c *Client) ListClusters() (ClusterList, error) {
 		return ClusterList{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeClusters, nil)
+	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeClusters, nil)
 	if err != nil {
-		c.Log.Error(err, "during list personal clusters request prep")
+		c.log.Error(err, "during list personal clusters request prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during personal cluster list request")
+		c.log.Error(err, "during personal cluster list request")
 		return ClusterList{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API (cluster list)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API (cluster list)", "statusCode", resp.StatusCode)
 		return ClusterList{}, errors.New("unexpected response status from API")
 	}
 
 	var myList ClusterList
 	err = json.NewDecoder(resp.Body).Decode(&myList)
 	if err != nil {
-		c.Log.Error(err, "error unmarshaling response body for cluster list")
+		c.log.Error(err, "error unmarshaling response body for cluster list")
 		return ClusterList{}, err
 	}
 	return myList, nil
@@ -177,31 +209,31 @@ func (c *Client) ListTeamClusters(teamID string) (ClusterList, error) {
 		return ClusterList{}, err
 	}
 
-	reqURL := fmt.Sprintf("%s%s?team_id=%s", c.APITarget, routeClusters, teamID)
+	reqURL := fmt.Sprintf("%s%s?team_id=%s", c.apiTarget, routeClusters, teamID)
 
 	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
-		c.Log.Error(err, "during list team clusters request prep")
+		c.log.Error(err, "during list team clusters request prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during team cluster list request")
+		c.log.Error(err, "during team cluster list request")
 		return ClusterList{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API (team cluster list)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API (team cluster list)", "statusCode", resp.StatusCode)
 		return ClusterList{}, errors.New("unexpected response status from API")
 	}
 
 	var teamList ClusterList
 	err = json.NewDecoder(resp.Body).Decode(&teamList)
 	if err != nil {
-		c.Log.Error(err, "error unmarshaling response body for cluster list")
+		c.log.Error(err, "error unmarshaling response body for cluster list")
 		return ClusterList{}, err
 	}
 	return teamList, nil
@@ -214,22 +246,22 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 		return ClusterList{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeTeams, nil)
+	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeTeams, nil)
 	if err != nil {
-		c.Log.Error(err, "during list teams prep")
+		c.log.Error(err, "during list teams prep")
 		return ClusterList{}, err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during list teams")
+		c.log.Error(err, "during list teams")
 		return ClusterList{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
 		return ClusterList{}, errors.New("unexpected response status from API")
 	}
 
@@ -240,7 +272,7 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&teamList)
 	if err != nil && teamList.Teams != nil {
-		c.Log.Error(err, "error unmarshaling response body for team list")
+		c.log.Error(err, "error unmarshaling response body for team list")
 		return ClusterList{}, err
 	}
 
@@ -273,31 +305,31 @@ func (c *Client) DefaultConnRole(id string) (ConnectionRole, error) {
 		return ConnectionRole{}, err
 	}
 
-	route := fmt.Sprintf(c.APITarget.String()+routeDefaultRole, id)
+	route := fmt.Sprintf(c.apiTarget.String()+routeDefaultRole, id)
 
 	req, err := http.NewRequest(http.MethodGet, route, nil)
 	if err != nil {
-		c.Log.Error(err, "during cluster role request prep")
+		c.log.Error(err, "during cluster role request prep")
 		return ConnectionRole{}, err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during cluster role request")
+		c.log.Error(err, "during cluster role request")
 		return ConnectionRole{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API(cluster role)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API(cluster role)", "statusCode", resp.StatusCode)
 		return ConnectionRole{}, errors.New("unexpected response status from API")
 	}
 
 	var role ConnectionRole
 	err = json.NewDecoder(resp.Body).Decode(&role)
 	if err != nil {
-		c.Log.Error(err, "error unmarshaling response body (cluster role)")
+		c.log.Error(err, "error unmarshaling response body (cluster role)")
 		return ConnectionRole{}, err
 	}
 
@@ -309,24 +341,24 @@ func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
 		return ClusterDetail{}, err
 	}
 
-	route := fmt.Sprintf("%s%s/%s", c.APITarget, routeClusters, id)
+	route := fmt.Sprintf("%s%s/%s", c.apiTarget, routeClusters, id)
 
 	req, err := http.NewRequest(http.MethodGet, route, nil)
 	if err != nil {
-		c.Log.Error(err, "during cluster detail request")
+		c.log.Error(err, "during cluster detail request")
 		return ClusterDetail{}, err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during cluster detail request prep")
+		c.log.Error(err, "during cluster detail request prep")
 		return ClusterDetail{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API(cluster detail)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API(cluster detail)", "statusCode", resp.StatusCode)
 		return ClusterDetail{}, errors.New("unexpected response status from API")
 	}
 
@@ -335,7 +367,7 @@ func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&detail)
 	if err != nil {
-		c.Log.Error(err, "error unmarshaling response body (cluster detail)")
+		c.log.Error(err, "error unmarshaling response body (cluster detail)")
 		return ClusterDetail{}, err
 	}
 	return detail.Cluster, nil
@@ -346,52 +378,52 @@ func (c *Client) DeleteCluster(id string) error {
 		return err
 	}
 
-	route := fmt.Sprintf("%s%s/%s", c.APITarget, routeClusters, id)
+	route := fmt.Sprintf("%s%s/%s", c.apiTarget, routeClusters, id)
 
 	req, err := http.NewRequest(http.MethodDelete, route, nil)
 	if err != nil {
-		c.Log.Error(err, "during cluster delete request")
+		c.log.Error(err, "during cluster delete request")
 		return err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during cluster delete request prep")
+		c.log.Error(err, "during cluster delete request prep")
 		return err
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		c.Log.Info("unexpected status code from API(cluster delete)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API(cluster delete)", "statusCode", resp.StatusCode)
 		return errors.New("unexpected response status from API")
 	}
 
 	return nil
 }
 
-// PersonalTeamID returns the team id for the caller's personal team to use
-// as the default in creation requests
-func (c *Client) PersonalTeamID() (string, error) {
+// DefaultTeamID returns the team id for creation requests
+//   currently retrieves personal team id, future change for configured default
+func (c *Client) DefaultTeamID() (string, error) {
 	if err := c.precheck(); err != nil {
 		return "", err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, c.APITarget.String()+routeTeams, nil)
+	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeTeams, nil)
 	if err != nil {
-		c.Log.Error(err, "during list teams prep")
+		c.log.Error(err, "during list teams prep")
 		return "", err
 	}
-	setBearer(req)
+	c.setBearer(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.Log.Error(err, "during list teams")
+		c.log.Error(err, "during list teams")
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.Log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
 		return "", errors.New("unexpected response status from API")
 	}
 
@@ -403,7 +435,7 @@ func (c *Client) PersonalTeamID() (string, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&teamList)
 	if err != nil && teamList.Teams != nil {
-		c.Log.Error(err, "error unmarshaling response body for team list")
+		c.log.Error(err, "error unmarshaling response body for team list")
 		return "", err
 	}
 

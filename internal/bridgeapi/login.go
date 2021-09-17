@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/jpillora/backoff"
 )
 
@@ -36,21 +37,36 @@ const (
 var primaryLogin *loginManager
 
 type loginManager struct {
+	// Not protected by mutex, only set at init
+	authTarget  *url.URL
+	loginSource CredentialProvider
+	label       string
+
+	// Protected via mutex
 	sync.RWMutex
+	log           logr.Logger
 	activeToken   string
 	activeTokenID string
-	apiTarget     *url.URL
-	curState      LoginState
 	refreshTimer  *time.Timer
 	expireTimer   *time.Timer
-	loginSource   CredentialProvider
 	retryDelay    backoff.Backoff
+	curState      LoginState
+	lastRefresh   time.Time
+	lastUsage     time.Time
 }
 
-func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
+func newLoginManager(
+	target *url.URL,
+	cp CredentialProvider,
+	logger logr.Logger,
+	lbl string) *loginManager {
 	lm := &loginManager{
+		label:       lbl,
 		loginSource: cp,
-		apiTarget:   target,
+		authTarget:  target,
+		log:         logr.Discard(),
+		lastRefresh: time.Now(),
+		lastUsage:   time.Now().Add(time.Millisecond), // Initial condition lastUsage > lastRefresh
 		retryDelay: backoff.Backoff{
 			Min:    500 * time.Millisecond,
 			Max:    3600 * time.Second,
@@ -62,25 +78,53 @@ func newLoginManager(cp CredentialProvider, target *url.URL) *loginManager {
 	return lm
 }
 
+func (lm *loginManager) SetLogger(logger logr.Logger) {
+	lm.Lock()
+	defer lm.Unlock()
+
+	lm.log = logger
+}
+
+// Ping attempts to refresh login state when in a temporary non-active state
+func (lm *loginManager) Ping() {
+	lm.RLock()
+	state := lm.curState
+	lm.RUnlock()
+
+	if state == LoginFailed || state == LoginInactive || state == LoginUnstarted {
+		lm.login()
+	}
+}
+
+func (lm *loginManager) refreshLogin() {
+	refresh := false
+	lm.Lock()
+	refresh = lm.lastUsage.After(lm.lastRefresh)
+	lm.Unlock()
+	if refresh {
+		lm.login()
+	}
+}
+
 func (lm *loginManager) login() {
 	creds, err := lm.loginSource.ProvideCredential()
 	if err != nil {
-		pkgLog.Error(err, "error retrieving credentials")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.log.Error(err, "error retrieving credentials")
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		return
 	}
 	if creds.Zero() {
 		// Fast fail login process for unset credentials, may be expected
 		// depending on "eventual consistency" usage
-		pkgLog.Info("provided credentials currently blank")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.log.Info("provided credentials currently blank")
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		return
 	}
 
-	req, err := http.NewRequest(http.MethodPost, lm.apiTarget.String()+"/token", nil)
+	req, err := http.NewRequest(http.MethodPost, lm.authTarget.String()+"/access-tokens", nil)
 	if err != nil {
-		pkgLog.Error(err, "error creating token login request")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.log.Error(err, "error creating token login request")
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		lm.failLoginTemp()
 		return
 	}
@@ -89,25 +133,25 @@ func (lm *loginManager) login() {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		pkgLog.Error(err, "error creating http client")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.log.Error(err, "error creating http client")
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		lm.failLoginTemp()
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
-		pkgLog.Error(fmt.Errorf("API returned status %d for login [%s]", resp.StatusCode, creds.Key), "login failure")
+		lm.log.Error(fmt.Errorf("API returned status %d for login [%s]", resp.StatusCode, creds.Key), "login failure")
 		lm.Lock()
 		lm.curState = LoginInvalidCreds
 		lm.Unlock()
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		return
 	} else if resp.StatusCode != http.StatusOK {
-		pkgLog.Error(
+		lm.log.Error(
 			fmt.Errorf("API returned unexpected response %d for login [%s]", resp.StatusCode, creds.Key),
 			"unexpected login response")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		lm.failLoginTemp()
 		return
 	}
@@ -115,8 +159,8 @@ func (lm *loginManager) login() {
 	var tr tokenResponse
 	err = json.NewDecoder(resp.Body).Decode(&tr)
 	if err != nil {
-		pkgLog.Error(err, "error unmarshaling token response body")
-		lm.setNextLogin(lm.retryDelay.Duration())
+		lm.log.Error(err, "error unmarshaling token response body")
+		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
 		lm.failLoginTemp()
 		return
 	}
@@ -129,7 +173,7 @@ func (lm *loginManager) login() {
 	lm.Unlock()
 
 	lm.setExpiration(tr.ExpiresIn)
-	lm.setNextLogin(time.Duration(tr.ExpiresIn-refreshBuffer) * time.Second)
+	lm.setNextLogin(time.Duration(tr.ExpiresIn-refreshBuffer)*time.Second, lm.refreshLogin)
 }
 
 func (lm *loginManager) failLoginTemp() {
@@ -141,14 +185,14 @@ func (lm *loginManager) failLoginTemp() {
 	}
 }
 
-func (lm *loginManager) setNextLogin(delay time.Duration) {
+func (lm *loginManager) setNextLogin(delay time.Duration, loginFunc func()) {
 	lm.Lock()
 	defer lm.Unlock()
 	// If refresh timer exists, clean it up before creating new
 	if lm.refreshTimer != nil {
 		lm.refreshTimer.Stop()
 	}
-	lm.refreshTimer = time.AfterFunc(delay, lm.login)
+	lm.refreshTimer = time.AfterFunc(delay, loginFunc)
 }
 
 func (lm *loginManager) expireLogin() {
@@ -161,8 +205,9 @@ func (lm *loginManager) expireLogin() {
 }
 
 func (lm *loginManager) token() string {
-	lm.RLock()
-	defer lm.RUnlock()
+	lm.Lock()
+	defer lm.Unlock()
+	lm.lastUsage = time.Now()
 
 	return lm.activeToken
 }
@@ -182,33 +227,4 @@ func (lm *loginManager) State() LoginState {
 	lm.RLock()
 	defer lm.RUnlock()
 	return lm.curState
-}
-
-func (lm *loginManager) UpdateLogin(cp CredentialProvider) {
-	lm.Lock()
-	defer lm.Unlock()
-
-	lm.loginSource = cp
-}
-
-func (lm *loginManager) UpdateAuthURL(target *url.URL) {
-	lm.Lock()
-	defer lm.Unlock()
-
-	lm.apiTarget = target
-}
-
-func SetLogin(cp CredentialProvider, authBaseURL *url.URL) {
-	if primaryLogin == nil {
-		primaryLogin = newLoginManager(cp, authBaseURL)
-	} else {
-		primaryLogin.UpdateLogin(cp)
-		primaryLogin.UpdateAuthURL(authBaseURL)
-	}
-}
-
-type tokenResponse struct {
-	Token     string `json:"access_token"`
-	ExpiresIn int64  `json:"expires_in"`
-	TokenID   string `json:"id"`
 }

@@ -116,7 +116,33 @@ func main() {
 
 	crunchybridgeAPIURL = strings.TrimRight(crunchybridgeAPIURL, "/")
 
-	var bridgeClient *bridgeapi.Client
+	apiURL, err := url.Parse(crunchybridgeAPIURL)
+	if err != nil {
+		setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
+		os.Exit(1)
+	}
+
+	// Create client directly for querying non-managed object
+	crClient, err := ctrlclient.New(mgr.GetConfig(), ctrlclient.Options{})
+	if err != nil {
+		setupLog.Error(err, "failed to init client to get api credentials")
+		os.Exit(1)
+	}
+
+	// Initialize credential provider from environment
+	ksp := &kubeadapter.KubeSecretCredentialProvider{
+		Client:      crClient,
+		Namespace:   credNamespace,
+		Name:        credName,
+		KeyField:    "api_key",
+		SecretField: "api_secret",
+	}
+
+	bridgeClient, err := bridgeapi.NewClient(apiURL, ksp, bridgeapi.SetLogger(setupLog))
+	if err != nil {
+		setupLog.Error(err, "error setting up Crunchy Bridge API client")
+		os.Exit(1)
+	}
 
 	// Set up manager with DBaaS controllers if built with option
 	if dbaasInit != nil {
@@ -124,40 +150,6 @@ func main() {
 			apiURL:    crunchybridgeAPIURL,
 			clientset: clientset,
 		})
-
-		// Uses the side effect of DBaaSProvider's initialization of shared
-		// package-level login to ensure credProvider matches that configured
-		// for DBaaS-related controllers
-		bridgeClient = bridgeapi.NewClient()
-	} else {
-		// Create client directly for querying non-managed object
-		client, err := ctrlclient.New(mgr.GetConfig(), ctrlclient.Options{})
-		if err != nil {
-			setupLog.Error(err, "failed to init client to get api credentials")
-			os.Exit(1)
-		}
-
-		// Initialize credential provider from environment
-		ksp := &kubeadapter.KubeSecretCredentialProvider{
-			Client:      client,
-			Namespace:   credNamespace,
-			Name:        credName,
-			KeyField:    "api_key",
-			SecretField: "api_secret",
-		}
-
-		apiURL, err := url.Parse(crunchybridgeAPIURL)
-		if err != nil {
-			setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
-			os.Exit(1)
-		}
-
-		bridgeapi.SetLogin(ksp, apiURL)
-		// Presently not different from prior block, but will likely change
-		// in the future and documents this client having a
-		// different package global state than prior block
-		bridgeClient = bridgeapi.NewClient()
-		bridgeClient.APITarget = apiURL
 	}
 
 	if err = (&crunchybridgecontrollers.BridgeClusterReconciler{

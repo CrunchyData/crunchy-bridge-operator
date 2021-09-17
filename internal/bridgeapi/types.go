@@ -26,7 +26,7 @@ var (
 	ErrorConflict   = errors.New("Non-unique name specified in request")
 	ErrorAPIUnset   = errors.New("No API target URL set")
 
-	ErrorFailedLogin  = errors.New("Failed to establish initial login")
+	ErrorFailedLogin  = errors.New("Initial login not established")
 	ErrorFailedRenew  = errors.New("Failed to establish renewed login")
 	ErrorInvalidCreds = errors.New("Invalid credentials for API login")
 	ErrorUnstarted    = errors.New("Successful login not yet achieved")
@@ -115,4 +115,10 @@ type ConnectionRole struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 	URI      string `json:"uri"`
+}
+
+type tokenResponse struct {
+	ExpiresIn int64  `json:"expires_in"`
+	Token     string `json:"access_token"`
+	TokenID   string `json:"id"`
 }
