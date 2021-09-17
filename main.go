@@ -138,10 +138,14 @@ func main() {
 		SecretField: "api_secret",
 	}
 
+	runBridgeControllers := true
+
 	bridgeClient, err := bridgeapi.NewClient(apiURL, ksp, bridgeapi.SetLogger(setupLog))
 	if err != nil {
-		setupLog.Error(err, "error setting up Crunchy Bridge API client")
-		os.Exit(1)
+		setupLog.Info("unable to configure Crunchy Bridge API client for crunchybridge controllers, disabling")
+		runBridgeControllers = false
+		// setupLog.Error(err, "error setting up Crunchy Bridge API client for crunchybridge controllers")
+		// os.Exit(1)
 	}
 
 	// Set up manager with DBaaS controllers if built with option
@@ -152,21 +156,23 @@ func main() {
 		})
 	}
 
-	if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
-		Client:       mgr.GetClient(),
-		Scheme:       mgr.GetScheme(),
-		BridgeClient: bridgeClient,
-		WatchInt:     10 * time.Second,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
-		os.Exit(1)
-	}
-	if err = (&crunchybridgecontrollers.DatabaseRoleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
-		os.Exit(1)
+	if runBridgeControllers {
+		if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
+			Client:       mgr.GetClient(),
+			Scheme:       mgr.GetScheme(),
+			BridgeClient: bridgeClient,
+			WatchInt:     10 * time.Second,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
+			os.Exit(1)
+		}
+		if err = (&crunchybridgecontrollers.DatabaseRoleReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder
