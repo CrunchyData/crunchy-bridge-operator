@@ -92,5 +92,5 @@ func cacheLabel(authURL *url.URL, cp CredentialProvider) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return authURL.String() + cred.Key, nil
+	return authURL.String() + cred.Key + cred.Secret, nil
 }
