@@ -72,6 +72,8 @@ func main() {
 	// Namespace and Name for APIKey secret default values
 	credNamespace := "default"
 	credName := "crunchybridge_api_key"
+	keyField := "api_key"
+	keySecret := "api_secret"
 
 	flag.StringVar(&crunchybridgeAPIURL, "crunchybridgeapi-url", "https://api.crunchybridge.com", "the Crunchy bridge API URL")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -93,6 +95,12 @@ func main() {
 	}
 	if cn, ok := os.LookupEnv("API_CRED_NAME"); ok {
 		credName = cn
+	}
+	if kf, ok := os.LookupEnv("API_CRED_KEY_FIELD"); ok {
+		keyField = kf
+	}
+	if ks, ok := os.LookupEnv("API_CRED_SECRET_FIELD"); ok {
+		keySecret = ks
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -134,8 +142,8 @@ func main() {
 		Client:      crClient,
 		Namespace:   credNamespace,
 		Name:        credName,
-		KeyField:    "api_key",
-		SecretField: "api_secret",
+		KeyField:    keyField,
+		SecretField: keySecret,
 	}
 
 	runBridgeControllers := true
