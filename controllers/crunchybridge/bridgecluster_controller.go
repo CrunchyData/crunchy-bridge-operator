@@ -57,7 +57,7 @@ type BridgeClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "BridgeCluster", req.NamespacedName)
+	logger := log.FromContext(ctx)
 
 	if r.BridgeClient == nil {
 		err := errors.New("Uninitialized client")
@@ -83,6 +83,7 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				if err := r.BridgeClient.DeleteCluster(id); err != nil {
 					return ctrl.Result{}, err
 				}
+				logger.Info("cluster deleted", "id", id)
 			}
 			controllerutil.RemoveFinalizer(clusterObj, bcFinalizer)
 			if err := r.Update(ctx, clusterObj); err != nil {
@@ -198,7 +199,7 @@ func (r *BridgeClusterReconciler) createFromSpec(spec crunchybridgev1alpha1.Brid
 
 	if tid := spec.TeamID; tid == "" {
 		// Lookup TeamID
-		if id, err := r.BridgeClient.PersonalTeamID(); err != nil {
+		if id, err := r.BridgeClient.DefaultTeamID(); err != nil {
 			return req, err
 		} else {
 			req.TeamID = id

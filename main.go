@@ -72,6 +72,8 @@ func main() {
 	// Namespace and Name for APIKey secret default values
 	credNamespace := "default"
 	credName := "crunchybridge_api_key"
+	keyField := "api_key"
+	keySecret := "api_secret"
 
 	flag.StringVar(&crunchybridgeAPIURL, "crunchybridgeapi-url", "https://api.crunchybridge.com", "the Crunchy bridge API URL")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -93,6 +95,12 @@ func main() {
 	}
 	if cn, ok := os.LookupEnv("API_CRED_NAME"); ok {
 		credName = cn
+	}
+	if kf, ok := os.LookupEnv("API_CRED_KEY_FIELD"); ok {
+		keyField = kf
+	}
+	if ks, ok := os.LookupEnv("API_CRED_SECRET_FIELD"); ok {
+		keySecret = ks
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -116,7 +124,35 @@ func main() {
 
 	crunchybridgeAPIURL = strings.TrimRight(crunchybridgeAPIURL, "/")
 
-	var bridgeClient *bridgeapi.Client
+	apiURL, err := url.Parse(crunchybridgeAPIURL)
+	if err != nil {
+		setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
+		os.Exit(1)
+	}
+
+	// Create client directly for querying non-managed object
+	crClient, err := ctrlclient.New(mgr.GetConfig(), ctrlclient.Options{})
+	if err != nil {
+		setupLog.Error(err, "failed to init client to get api credentials")
+		os.Exit(1)
+	}
+
+	// Initialize credential provider from environment
+	ksp := &kubeadapter.KubeSecretCredentialProvider{
+		Client:      crClient,
+		Namespace:   credNamespace,
+		Name:        credName,
+		KeyField:    keyField,
+		SecretField: keySecret,
+	}
+
+	runBridgeControllers := true
+
+	bridgeClient, err := bridgeapi.NewClient(apiURL, ksp, bridgeapi.SetLogger(setupLog))
+	if err != nil {
+		setupLog.Info("unable to configure Crunchy Bridge API client for crunchybridge controllers, disabling")
+		runBridgeControllers = false
+	}
 
 	// Set up manager with DBaaS controllers if built with option
 	if dbaasInit != nil {
@@ -124,57 +160,25 @@ func main() {
 			apiURL:    crunchybridgeAPIURL,
 			clientset: clientset,
 		})
-
-		// Uses the side effect of DBaaSProvider's initialization of shared
-		// package-level login to ensure credProvider matches that configured
-		// for DBaaS-related controllers
-		bridgeClient = bridgeapi.NewClient()
-	} else {
-		// Create client directly for querying non-managed object
-		client, err := ctrlclient.New(mgr.GetConfig(), ctrlclient.Options{})
-		if err != nil {
-			setupLog.Error(err, "failed to init client to get api credentials")
-			os.Exit(1)
-		}
-
-		// Initialize credential provider from environment
-		ksp := &kubeadapter.KubeSecretCredentialProvider{
-			Client:      client,
-			Namespace:   credNamespace,
-			Name:        credName,
-			KeyField:    "api_key",
-			SecretField: "api_secret",
-		}
-
-		apiURL, err := url.Parse(crunchybridgeAPIURL)
-		if err != nil {
-			setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
-			os.Exit(1)
-		}
-
-		bridgeapi.SetLogin(ksp, apiURL)
-		// Presently not different from prior block, but will likely change
-		// in the future and documents this client having a
-		// different package global state than prior block
-		bridgeClient = bridgeapi.NewClient()
-		bridgeClient.APITarget = apiURL
 	}
 
-	if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
-		Client:       mgr.GetClient(),
-		Scheme:       mgr.GetScheme(),
-		BridgeClient: bridgeClient,
-		WatchInt:     10 * time.Second,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
-		os.Exit(1)
-	}
-	if err = (&crunchybridgecontrollers.DatabaseRoleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
-		os.Exit(1)
+	if runBridgeControllers {
+		if err = (&crunchybridgecontrollers.BridgeClusterReconciler{
+			Client:       mgr.GetClient(),
+			Scheme:       mgr.GetScheme(),
+			BridgeClient: bridgeClient,
+			WatchInt:     10 * time.Second,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BridgeCluster")
+			os.Exit(1)
+		}
+		if err = (&crunchybridgecontrollers.DatabaseRoleReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DatabaseRole")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder

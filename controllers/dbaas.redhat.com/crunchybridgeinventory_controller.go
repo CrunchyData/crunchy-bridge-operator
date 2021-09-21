@@ -18,7 +18,6 @@ package dbaasredhatcom
 
 import (
 	"context"
-	"errors"
 	"net/url"
 
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
@@ -114,24 +113,7 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 		SecretField: SECRETFIELDNAME,
 	}
 
-	// Check that the KSP is returning a useful value
-	testCred, err := kubeSecretProvider.ProvideCredential()
-	if err != nil {
-		return nil, err
-	} else if testCred.Zero() {
-		// Login credential secret is a prerequisite for DBaaS operation, so
-		// return error if set to empty
-		return nil, errors.New("API secret initialized to zero values")
-	}
-
-	// Initialize login with known good provider
-	bridgeapi.SetLogin(kubeSecretProvider, baseUrl)
-
-	bridgeapiClient := &bridgeapi.Client{
-		APITarget: baseUrl,
-		Log:       logger,
-	}
-	return bridgeapiClient, nil
+	return bridgeapi.NewClient(baseUrl, kubeSecretProvider, bridgeapi.SetLogger(logger))
 }
 
 // updateStatus
