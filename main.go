@@ -152,8 +152,6 @@ func main() {
 	if err != nil {
 		setupLog.Info("unable to configure Crunchy Bridge API client for crunchybridge controllers, disabling")
 		runBridgeControllers = false
-		// setupLog.Error(err, "error setting up Crunchy Bridge API client for crunchybridge controllers")
-		// os.Exit(1)
 	}
 
 	// Set up manager with DBaaS controllers if built with option

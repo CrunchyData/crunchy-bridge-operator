@@ -65,7 +65,6 @@ func NewClient(apiURL *url.URL, cp CredentialProvider, opts ...ClientOption) (*C
 		c.session = sess
 	}
 
-	fmt.Printf("Session state: %#v\n", c.session)
 	return c, nil
 }
 
