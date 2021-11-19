@@ -1,0 +1,20 @@
+# permissions for end users to view bridgeteams.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bridgeteam-viewer-role
+rules:
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams/status
+  verbs:
+  - get

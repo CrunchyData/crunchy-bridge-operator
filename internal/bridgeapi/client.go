@@ -229,13 +229,13 @@ func (c *Client) ListTeamClusters(teamID string) (ClusterList, error) {
 		return ClusterList{}, errors.New("unexpected response status from API")
 	}
 
-	var teamList ClusterList
-	err = json.NewDecoder(resp.Body).Decode(&teamList)
+	var clusterList ClusterList
+	err = json.NewDecoder(resp.Body).Decode(&clusterList)
 	if err != nil {
 		c.log.Error(err, "error unmarshaling response body for cluster list")
 		return ClusterList{}, err
 	}
-	return teamList, nil
+	return clusterList, nil
 }
 
 // ListAllClusters returns all clusters visible to the user, including both
@@ -444,4 +444,40 @@ func (c *Client) DefaultTeamID() (string, error) {
 		}
 	}
 	return "", errors.New("unable to identify personal team")
+}
+
+// ListAllTeams returns all teams visible to the user, including both
+// personal team and other teams
+func (c *Client) ListAllTeams() (TeamList, error) {
+	if err := c.precheck(); err != nil {
+		return TeamList{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeTeams, nil)
+	if err != nil {
+		c.log.Error(err, "during list teams prep")
+		return TeamList{}, err
+	}
+	c.setBearer(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		c.log.Error(err, "during list teams")
+		return TeamList{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		return TeamList{}, errors.New("unexpected response status from API")
+	}
+
+	var teamList TeamList
+	err = json.NewDecoder(resp.Body).Decode(&teamList)
+	if err != nil && teamList.Teams != nil {
+		c.log.Error(err, "error unmarshaling response body for team list")
+		return TeamList{}, err
+	}
+
+	return teamList, nil
 }

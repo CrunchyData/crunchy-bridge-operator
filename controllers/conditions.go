@@ -31,6 +31,7 @@ const (
 	NotFound            string = "NotFound"
 	SuccessMessage      string = "Successfully listed crunchy bridge Inventories"
 	SuccessConnection   string = "Successfully retrieved the connection detail\n"
+	SuccessTeam         string = "Successfully listed crunchy bridge Teams"
 )
 
 // ObjectWithStatusConditions is an interface that describes kubernetes resource

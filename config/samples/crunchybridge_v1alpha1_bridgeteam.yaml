@@ -1,0 +1,8 @@
+apiVersion: crunchybridge.crunchydata.com/v1alpha1
+kind: BridgeTeam
+metadata:
+  name: bridgeteam-sample
+spec:
+  credentialsRef:
+    name: crunchy-bridge-api-key
+    namespace: default

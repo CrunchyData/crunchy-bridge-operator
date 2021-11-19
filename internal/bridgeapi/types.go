@@ -93,6 +93,17 @@ type ClusterList struct {
 	Count    int             `json:"total_count"`
 }
 
+type TeamList struct {
+	Teams []TeamDetail `json:"teams"`
+}
+
+type TeamDetail struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	IsDefault  bool   `json:"is_default"`
+	IsPersonal bool   `json:"is_personal"`
+}
+
 type ClusterDetail struct {
 	CPU              int             `json:"cpu"`
 	Created          time.Time       `json:"created_at"`

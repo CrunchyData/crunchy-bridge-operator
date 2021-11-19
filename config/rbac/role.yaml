@@ -58,6 +58,32 @@ rules:
 - apiGroups:
   - crunchybridge.crunchydata.com
   resources:
+  - bridgeteams
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
   - databaseroles
   verbs:
   - create

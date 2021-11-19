@@ -1,0 +1,24 @@
+# permissions for end users to edit bridgeteams.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bridgeteam-editor-role
+rules:
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - crunchybridge.crunchydata.com
+  resources:
+  - bridgeteams/status
+  verbs:
+  - get
