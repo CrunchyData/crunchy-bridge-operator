@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package dbaasredhatcom
+package controllers
 
 import (
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
@@ -39,9 +39,9 @@ type ObjectWithStatusConditions interface {
 	GetStatusConditions() *[]metav1.Condition
 }
 
-// SetSyncCondition sets the given condition with the given status,
+// SetStatusCondition sets the given condition with the given status,
 // reason and message on a resource.
-func setStatusCondition(obj ObjectWithStatusConditions, condition string, status metav1.ConditionStatus, reason, message string) {
+func SetStatusCondition(obj ObjectWithStatusConditions, condition string, status metav1.ConditionStatus, reason, message string) {
 	conditions := obj.GetStatusConditions()
 
 	newCondition := metav1.Condition{
@@ -54,7 +54,7 @@ func setStatusCondition(obj ObjectWithStatusConditions, condition string, status
 	apimeta.SetStatusCondition(conditions, newCondition)
 }
 
-// GetCondition return the condition with the passed condition type from
+// GetConnectonCondition  return the condition with the passed condition type from
 // the status object. If the condition is not already present, return nil
 func GetConnectonCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, condType string) *metav1.Condition {
 	for i := range inv.Status.Conditions {
@@ -65,7 +65,7 @@ func GetConnectonCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 	return nil
 }
 
-// GetCondition return the condition with the passed condition type from
+// GetInventoryCondition  return the condition with the passed condition type from
 // the status object. If the condition is not already present, return nil
 func GetInventoryCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeInventory, condType string) *metav1.Condition {
 	for i := range inv.Status.Conditions {

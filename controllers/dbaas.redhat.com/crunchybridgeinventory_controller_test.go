@@ -18,6 +18,7 @@ package dbaasredhatcom
 
 import (
 	"github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/controllers"
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -43,7 +44,7 @@ var _ = Describe("CrunchyBridgeInventory controller", func() {
 			By("creating inventory and updating status")
 			inventory := createInventories(inventoryName)
 
-			cond := GetInventoryCondition(inventory, string(SpecSynced))
+			cond := controllers.GetInventoryCondition(inventory, string(controllers.SpecSynced))
 			Expect(cond.Status).Should(Equal(metav1.ConditionTrue))
 
 			By("deleting inventory")

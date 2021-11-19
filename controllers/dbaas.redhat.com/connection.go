@@ -18,6 +18,7 @@ package dbaasredhatcom
 import (
 	"context"
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/controllers"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -159,7 +160,7 @@ func connectionCMData(connectionString string) map[string]string {
 // isBindingExist checking if binding already exits
 func (r *CrunchyBridgeConnectionReconciler) isBindingExist(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection) bool {
 
-	cond := GetConnectonCondition(connection, string(ReadyForBinding))
+	cond := controllers.GetConnectonCondition(connection, string(controllers.ReadyForBinding))
 	if cond != nil && cond.Status == metav1.ConditionTrue {
 		return true
 	}

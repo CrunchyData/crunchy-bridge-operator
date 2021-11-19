@@ -19,6 +19,7 @@ package dbaasredhatcom
 import (
 	"context"
 	"fmt"
+	"github.com/CrunchyData/crunchy-bridge-operator/controllers"
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +82,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 
 	instance, err := getInstance(&inventory, connection.Spec.InstanceID)
 	if instance == nil {
-		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, NotFound, err.Error())
+		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, controllers.NotFound, err.Error())
 		if statusErr != nil {
 			logger.Error(statusErr, "Error in updating CrunchyBridgeConnection status")
 			return ctrl.Result{Requeue: true}, statusErr
@@ -90,7 +91,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 	}
 	bridgeapiClient, err := setupClient(r.Client, inventory, r.APIBaseURL, logger)
 	if err != nil {
-		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, BackendError, err.Error())
+		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, controllers.BackendError, err.Error())
 		if statusErr != nil {
 			logger.Error(statusErr, "Error in updating CrunchyBridgeConnection status")
 			return ctrl.Result{Requeue: true}, statusErr
@@ -102,7 +103,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 	logger.Info("Crunchy Bridge Client Configured ")
 	err = r.connectionDetails(instance.InstanceID, &connection, bridgeapiClient, req, logger)
 	if err != nil {
-		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, BackendError, err.Error())
+		statusErr := r.updateStatus(ctx, connection, metav1.ConditionFalse, controllers.BackendError, err.Error())
 		if statusErr != nil {
 			logger.Error(statusErr, "Error in updating CrunchyBridgeConnection status")
 			return ctrl.Result{Requeue: true}, statusErr
@@ -110,7 +111,7 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 		logger.Error(err, "Error while getting connection details")
 		return ctrl.Result{}, err
 	}
-	statusErr := r.updateStatus(ctx, connection, metav1.ConditionTrue, Ready, SuccessConnection)
+	statusErr := r.updateStatus(ctx, connection, metav1.ConditionTrue, controllers.Ready, controllers.SuccessConnection)
 	if statusErr != nil {
 		logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
 		return ctrl.Result{Requeue: true}, statusErr
@@ -141,7 +142,7 @@ func getInstance(inventory *dbaasredhatcomv1alpha1.CrunchyBridgeInventory, insta
 
 // updateStatus
 func (r *CrunchyBridgeConnectionReconciler) updateStatus(ctx context.Context, connection dbaasredhatcomv1alpha1.CrunchyBridgeConnection, conidtionStatus metav1.ConditionStatus, reason, message string) error {
-	setStatusCondition(&connection, ReadyForBinding, conidtionStatus, reason, message)
+	controllers.SetStatusCondition(&connection, controllers.ReadyForBinding, conidtionStatus, reason, message)
 	if err := r.Client.Status().Update(context.Background(), &connection); err != nil {
 		return err
 	}
@@ -150,6 +151,6 @@ func (r *CrunchyBridgeConnectionReconciler) updateStatus(ctx context.Context, co
 
 // isInventoryReady is the CrunchyBridgeInventory ready?
 func isInventoryReady(inventory *dbaasredhatcomv1alpha1.CrunchyBridgeInventory) bool {
-	cond := GetInventoryCondition(inventory, string(SpecSynced))
+	cond := controllers.GetInventoryCondition(inventory, string(controllers.SpecSynced))
 	return cond != nil && cond.Status == metav1.ConditionTrue
 }
