@@ -90,7 +90,6 @@ type CreateRequest struct {
 
 type ClusterList struct {
 	Clusters []ClusterDetail `json:"clusters"`
-	Count    int             `json:"total_count"`
 }
 
 type ClusterDetail struct {

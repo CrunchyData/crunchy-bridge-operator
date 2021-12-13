@@ -29,8 +29,8 @@ func (r *CrunchyBridgeInventoryReconciler) discoverInventories(dbaasredhatcomv1a
 		logger.Error(clusterListErr, "Error Listing the instance")
 		return clusterListErr
 	}
-	logger.Info("cluster List ", " Total clusters ", clusterList.Count)
-	if clusterList.Count == 0 {
+	logger.Info("cluster List ", " Total clusters ", len(clusterList.Clusters))
+	if len(clusterList.Clusters) == 0 {
 		logger.Info("cluster List ", " No Clusters found for account details ", dbaasredhatcomv1alpha1.Spec.CredentialsRef)
 		dbaasredhatcomv1alpha1.Status.Instances = bridgeInstances
 		return nil
