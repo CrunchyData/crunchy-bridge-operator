@@ -284,7 +284,6 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 			return ClusterList{}, err
 		}
 		allClusters.Clusters = append(allClusters.Clusters, toAdd.Clusters...)
-		allClusters.Count += toAdd.Count
 	}
 	// At the time of this code, the team order is sorted by personal, then
 	// other teams and by team name
@@ -361,15 +360,14 @@ func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
 		return ClusterDetail{}, errors.New("unexpected response status from API")
 	}
 
-	var detail struct {
-		Cluster ClusterDetail
-	}
+	var detail ClusterDetail
 	err = json.NewDecoder(resp.Body).Decode(&detail)
 	if err != nil {
 		c.log.Error(err, "error unmarshaling response body (cluster detail)")
 		return ClusterDetail{}, err
 	}
-	return detail.Cluster, nil
+
+	return detail, nil
 }
 
 func (c *Client) DeleteCluster(id string) error {
