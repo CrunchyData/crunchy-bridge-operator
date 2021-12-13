@@ -47,6 +47,9 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+	// Version to be set at build time, this contruct ensures semver format
+	// if a development/test build is made
+	operatorVersion = "0.0.0-dev"
 )
 
 func init() {
@@ -148,7 +151,9 @@ func main() {
 
 	runBridgeControllers := true
 
-	bridgeClient, err := bridgeapi.NewClient(apiURL, ksp, bridgeapi.SetLogger(setupLog))
+	bridgeClient, err := bridgeapi.NewClient(apiURL, ksp,
+		bridgeapi.SetLogger(setupLog),
+		bridgeapi.SetVersion(operatorVersion))
 	if err != nil {
 		setupLog.Info("unable to configure Crunchy Bridge API client for crunchybridge controllers, disabling")
 		runBridgeControllers = false

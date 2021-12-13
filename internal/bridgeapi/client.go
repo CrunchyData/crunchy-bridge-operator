@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/go-logr/logr"
 )
@@ -40,6 +41,7 @@ type Client struct {
 	log        logr.Logger
 	client     *http.Client
 	session    *loginManager
+	version    string
 }
 
 func NewClient(apiURL *url.URL, cp CredentialProvider, opts ...ClientOption) (*Client, error) {
@@ -90,12 +92,19 @@ func SetHTTPClient(hc *http.Client) ClientOption {
 	}
 }
 
+// SetVersion sets the operator version in the client for self-identification
+func SetVersion(ver string) ClientOption {
+	return func(c *Client) {
+		c.version = ver
+	}
+}
+
 func (c *Client) precheck() error {
 	// Attempt to refresh login state if inactive (and not bad creds)
 	if c.session != nil {
 		c.session.Ping()
 	} else {
-		return errors.New("nil session - WTF?!")
+		return errors.New("unexpected nil session")
 	}
 
 	return c.GetLoginState().toError()
@@ -108,6 +117,16 @@ func (c *Client) GetLoginState() LoginState {
 // helper to set up auth with current bearer token
 func (c *Client) setBearer(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.session.token())
+}
+
+func (c *Client) setUserAgent(req *http.Request) {
+	req.Header.Set("User-Agent", "CrunchyBridgeOperator/"+strings.TrimSpace(c.version))
+}
+
+// helper to ensure headers used in all requests are set consistently
+func (c *Client) setCommonHeaders(req *http.Request) {
+	c.setBearer(req)
+	c.setUserAgent(req)
 }
 
 func (c *Client) CreateCluster(cr CreateRequest) error {
@@ -123,7 +142,7 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 		c.log.Error(err, "during create cluster request")
 		return err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -180,7 +199,7 @@ func (c *Client) ListClusters() (ClusterList, error) {
 		c.log.Error(err, "during list personal clusters request prep")
 		return ClusterList{}, err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -215,7 +234,7 @@ func (c *Client) ListTeamClusters(teamID string) (ClusterList, error) {
 		c.log.Error(err, "during list team clusters request prep")
 		return ClusterList{}, err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -250,7 +269,7 @@ func (c *Client) ListAllClusters() (ClusterList, error) {
 		c.log.Error(err, "during list teams prep")
 		return ClusterList{}, err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -310,7 +329,7 @@ func (c *Client) DefaultConnRole(id string) (ConnectionRole, error) {
 		c.log.Error(err, "during cluster role request prep")
 		return ConnectionRole{}, err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -346,7 +365,7 @@ func (c *Client) ClusterDetail(id string) (ClusterDetail, error) {
 		c.log.Error(err, "during cluster detail request")
 		return ClusterDetail{}, err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -382,7 +401,7 @@ func (c *Client) DeleteCluster(id string) error {
 		c.log.Error(err, "during cluster delete request")
 		return err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -410,7 +429,7 @@ func (c *Client) DefaultTeamID() (string, error) {
 		c.log.Error(err, "during list teams prep")
 		return "", err
 	}
-	c.setBearer(req)
+	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
