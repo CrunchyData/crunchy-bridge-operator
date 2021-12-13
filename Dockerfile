@@ -1,5 +1,6 @@
 # Build the manager binary
-FROM golang:1.16 as builder
+FROM golang:1.17 as builder
+ARG VER=0.0.0-dev
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -17,7 +18,7 @@ COPY controllers/ controllers/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags 'dbaas' -o manager
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "-X main.operatorVersion=${VER}" -tags 'dbaas' -o manager
 
 FROM registry.access.redhat.com/ubi8-minimal
 RUN microdnf -y update && microdnf -y clean all

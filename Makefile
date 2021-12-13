@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+VERSION ?= 0.0.2-dev
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -105,13 +105,13 @@ test: manifests generate fmt vet ## Run tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary, do not explicitly list files so build flags do their job.
-	go build -tags '${GOTAGS}' -o bin/manager
+	go build -ldflags "-X main.operatorVersion=${VERSION}" -tags '${GOTAGS}' -o bin/manager
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go ./dbaas_support.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG} --build-arg VER=${VERSION} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
