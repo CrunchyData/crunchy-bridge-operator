@@ -64,7 +64,7 @@ func newLoginManager(
 		label:       lbl,
 		loginSource: cp,
 		authTarget:  target,
-		log:         logr.Discard(),
+		log:         logger,
 		lastRefresh: time.Now(),
 		lastUsage:   time.Now().Add(time.Millisecond), // Initial condition lastUsage > lastRefresh
 		retryDelay: backoff.Backoff{
