@@ -25,12 +25,17 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 )
 
 var (
 	routeClusters    string = "/clusters"
 	routeDefaultRole string = "/clusters/%s/roles/default"
 	routeTeams       string = "/teams"
+)
+
+var (
+	BridgeOperatorNS = uuid.MustParse("b208adb0-ca76-40f7-ab28-8a505730bd25")
 )
 
 type ClientOption func(*Client)
@@ -135,14 +140,23 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 	}
 	// TODO: Identify personal team id if not provided in request
 
-	reqPayload := new(bytes.Buffer)
-	json.NewEncoder(reqPayload).Encode(cr)
-	req, err := http.NewRequest(http.MethodPost, c.apiTarget.String()+routeClusters, reqPayload)
+	reqPayload, err := json.Marshal(cr)
+	if err != nil {
+		c.log.Error(err, "during encoding cluster request")
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, c.apiTarget.String()+routeClusters, bytes.NewReader(reqPayload))
 	if err != nil {
 		c.log.Error(err, "during create cluster request")
 		return err
 	}
 	c.setCommonHeaders(req)
+	// Set Idempotency Key based on payload content
+	//
+	// API is expecting UUID for the value, but we're using UUIDv5 so that
+	// the key matches the request payload
+	idemKey := uuid.NewSHA1(BridgeOperatorNS, reqPayload)
+	req.Header.Set("Idempotency-Key", idemKey.String())
 
 	resp, err := c.client.Do(req)
 	if err != nil {
