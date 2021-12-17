@@ -24,3 +24,5 @@ testbin/*
 *.swp
 *.swo
 *~
+.DS_Store
+config/.DS_Store

@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: crunchybridgeinventories.dbaas.redhat.com
+  name: crunchybridgeinstances.dbaas.redhat.com
 spec:
   group: dbaas.redhat.com
   names:
-    kind: CrunchyBridgeInventory
-    listKind: CrunchyBridgeInventoryList
-    plural: crunchybridgeinventories
-    singular: crunchybridgeinventory
+    kind: CrunchyBridgeInstance
+    listKind: CrunchyBridgeInstanceList
+    plural: crunchybridgeinstances
+    singular: crunchybridgeinstance
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: CrunchyBridgeInventory is the Schema for the crunchybridgeinventories
+        description: CrunchyBridgeInstance is the Schema for the crunchybridgeinstances
           API
         properties:
           apiVersion:
@@ -35,15 +35,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: DBaaSInventorySpec defines the Inventory Spec to be used
-              by provider operators
+            description: DBaaSInstanceSpec defines the desired state of DBaaSInstance
             properties:
-              credentialsRef:
-                description: The Secret containing the provider-specific connection
-                  credentials to use with its API endpoint. The format of the Secret
-                  is specified in the provider’s operator in its DBaaSProvider CR
-                  (CredentialFields key). It is recommended to place the Secret in
-                  a namespace with limited accessibility.
+              inventoryRef:
+                description: A reference to the relevant DBaaSInventory CR
                 properties:
                   name:
                     description: The name for object of known type
@@ -52,17 +47,34 @@ spec:
                     description: The namespace where object of known type is stored
                     type: string
                 type: object
-              requestTimestamp:
-                description: RequestTimestamp is the time for inventory status to
-                  be refreshed.
-                format: date-time
+              name:
+                description: The name of this instance in the database service
+                type: string
+              otherInstanceParams:
+                additionalProperties:
+                  type: string
+                description: Any other provider-specific parameters related to create
+                  the instance
+                type: object
+              provider:
+                description: identifies the desired cloud infrastructure provider
+                enum:
+                - aws
+                - gcp
+                - azure
+                type: string
+              region:
+                description: identifies the requested deployment region within the
+                  provider (e.g. us-east-1)
                 type: string
             required:
-            - credentialsRef
+            - inventoryRef
+            - otherInstanceParams
+            - provider
+            - region
             type: object
           status:
-            description: DBaaSInventoryStatus defines the Inventory status to be used
-              by provider operators
+            description: DBaaSInstanceStatus defines the observed state of DBaaSInstance
             properties:
               conditions:
                 items:
@@ -133,29 +145,26 @@ spec:
                   - type
                   type: object
                 type: array
-              instances:
-                description: A list of instances returned from querying the DB provider
-                items:
-                  properties:
-                    instanceID:
-                      description: A provider-specific identifier for this instance
-                        in the database service. It may contain one or more pieces
-                        of information used by the provider operator to identify the
-                        instance on the database service.
-                      type: string
-                    instanceInfo:
-                      additionalProperties:
-                        type: string
-                      description: Any other provider-specific information related
-                        to this instance
-                      type: object
-                    name:
-                      description: The name of this instance in the database service
-                      type: string
-                  required:
-                  - instanceID
-                  type: object
-                type: array
+              instanceID:
+                description: The ID of the instance,
+                type: string
+              instanceInfo:
+                additionalProperties:
+                  type: string
+                description: Any other provider-specific information related to this
+                  instance
+                type: object
+              name:
+                description: The name of this instance in the database service
+                type: string
+              phase:
+                description: represents the cluster creation phase pending - creation
+                  not yet started creating - provisioning in progress ready - cluster
+                  provisioning complete
+                type: string
+            required:
+            - instanceID
+            - phase
             type: object
         type: object
     served: true

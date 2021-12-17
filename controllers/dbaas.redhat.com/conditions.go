@@ -22,15 +22,17 @@ import (
 )
 
 const (
-	SpecSynced          string = "SpecSynced"
-	BackendError        string = "BackendError"
-	AuthenticationError string = "AuthenticationError"
-	SyncOK              string = "SyncOK"
-	ReadyForBinding     string = "ReadyForBinding"
-	Ready               string = "Ready"
-	NotFound            string = "NotFound"
-	SuccessMessage      string = "Successfully listed crunchy bridge Inventories"
-	SuccessConnection   string = "Successfully retrieved the connection detail\n"
+	SpecSynced             string = "SpecSynced"
+	BackendError           string = "BackendError"
+	AuthenticationError    string = "AuthenticationError"
+	SyncOK                 string = "SyncOK"
+	ReadyForBinding        string = "ReadyForBinding"
+	InstanceReady          string = "InstanceReady"
+	Ready                  string = "Ready"
+	NotFound               string = "NotFound"
+	InstanceSuccessMessage string = "Successfully created crunchy bridge cluster"
+	SuccessMessage         string = "Successfully listed crunchy bridge Inventories"
+	SuccessConnection      string = "Successfully retrieved the connection detail\n"
 )
 
 // ObjectWithStatusConditions is an interface that describes kubernetes resource

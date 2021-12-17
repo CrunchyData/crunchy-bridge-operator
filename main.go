@@ -39,6 +39,7 @@ import (
 	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
 	crunchybridgecontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/crunchybridge"
 
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	//+kubebuilder:scaffold:imports
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
@@ -56,6 +57,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(crunchybridgev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dbaasredhatcomv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

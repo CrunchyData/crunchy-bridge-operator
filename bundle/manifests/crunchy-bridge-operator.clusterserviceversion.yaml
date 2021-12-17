@@ -11,12 +11,14 @@ metadata:
             "name": "bridgecluster-sample"
           },
           "spec": {
+            "enable_ha": false,
             "name": "TestCluster",
-            "pg_major_version": 12,
+            "pg_major_version": 14,
             "plan": "hobby-2",
             "provider": "aws",
             "region": "us-east-1",
-            "storage": 10
+            "storage": 100,
+            "team_id": "vp6hlxjcl5g73furjiztcrr2vi"
           }
         },
         {
@@ -45,6 +47,29 @@ metadata:
         },
         {
           "apiVersion": "dbaas.redhat.com/v1alpha1",
+          "kind": "CrunchyBridgeInstance",
+          "metadata": {
+            "name": "crunchybridgeinstance-sample"
+          },
+          "spec": {
+            "inventoryRef": {
+              "name": "my-db-provider-account",
+              "namespace": "openshift-dbaas-operator"
+            },
+            "name": "malty-zebra-725",
+            "otherInstanceParams": {
+              "HighAvail": "false",
+              "PGMajorVer": "14",
+              "Plan": "hobby-2",
+              "Storage": "100",
+              "TeamID": "vp6hlxjcl5g73furjiztcrr2vi"
+            },
+            "provider": "aws",
+            "region": "us-east-1"
+          }
+        },
+        {
+          "apiVersion": "dbaas.redhat.com/v1alpha1",
           "kind": "CrunchyBridgeInventory",
           "metadata": {
             "name": "crunchybridgeinventory-sample"
@@ -58,7 +83,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.9.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.10.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: crunchy-bridge-operator.v0.0.2-dev
   namespace: placeholder
@@ -73,6 +98,9 @@ spec:
       version: v1alpha1
     - kind: CrunchyBridgeConnection
       name: crunchybridgeconnections.dbaas.redhat.com
+      version: v1alpha1
+    - kind: CrunchyBridgeInstance
+      name: crunchybridgeinstances.dbaas.redhat.com
       version: v1alpha1
     - kind: CrunchyBridgeInventory
       name: crunchybridgeinventories.dbaas.redhat.com
@@ -195,6 +223,32 @@ spec:
         - apiGroups:
           - dbaas.redhat.com
           resources:
+          - crunchybridgeinstances
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - dbaas.redhat.com
+          resources:
+          - crunchybridgeinstances/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - dbaas.redhat.com
+          resources:
+          - crunchybridgeinstances/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - dbaas.redhat.com
+          resources:
           - crunchybridgeinventories
           verbs:
           - create
@@ -287,7 +341,8 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: quay.io/example.org/crunchy-bridge-operator:latest
+                image: quay.io/example.org/crunchy-bridge-operator:v0.0.2-dev
+                imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
                     path: /healthz

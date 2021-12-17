@@ -50,6 +50,11 @@ spec:
                     description: The namespace where object of known type is stored
                     type: string
                 type: object
+              requestTimestamp:
+                description: RequestTimestamp is the time for inventory status to
+                  be refreshed.
+                format: date-time
+                type: string
             required:
             - credentialsRef
             type: object

@@ -4,4 +4,5 @@ resources:
 - crunchybridge_v1alpha1_databaserole.yaml
 - dbaas.redhat.com_v1alpha1_crunchybridgeinventory.yaml
 - dbaas.redhat.com_v1alpha1_crunchybridgeconnection.yaml
+- dbaas.redhat.com_v1alpha1_crunchybridgeinstance.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

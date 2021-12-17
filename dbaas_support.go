@@ -54,4 +54,13 @@ func enableDBaaSExtension(mgr ctrl.Manager, cfg mainConfig) {
 		os.Exit(1)
 	}
 
+	if err := (&dbaasredhatcomcontrollers.CrunchyBridgeInstanceReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: cfg.apiURL,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInstance")
+		os.Exit(1)
+	}
+
 }

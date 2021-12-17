@@ -1,0 +1,17 @@
+apiVersion: dbaas.redhat.com/v1alpha1
+kind: CrunchyBridgeInstance
+metadata:
+  name: crunchybridgeinstance-sample
+spec:
+  inventoryRef:
+    name: my-db-provider-account
+    namespace: openshift-dbaas-operator
+  name: malty-zebra-725
+  otherInstanceParams:
+    HighAvail: 'false'
+    PGMajorVer: '14'
+    Plan: hobby-2
+    Storage: '100'
+    TeamID: vp6hlxjcl5g73furjiztcrr2vi
+  provider: aws
+  region: us-east-1
