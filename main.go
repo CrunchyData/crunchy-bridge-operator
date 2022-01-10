@@ -74,6 +74,8 @@ func main() {
 	var enableLeaderElection bool
 
 	var crunchybridgeAPIURL string
+
+	var syncPeriod time.Duration
 	// Namespace and Name for APIKey secret default values
 	credNamespace := "default"
 	credName := "crunchybridge_api_key"
@@ -86,6 +88,8 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.DurationVar(&syncPeriod, "sync-period", 12*time.Hour, "The minimum interval at which watched resources are reconciled (e.g. 12h)")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -115,6 +119,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0b67260c.crunchydata.com",
+		SyncPeriod:             &syncPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
