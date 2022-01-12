@@ -29,6 +29,7 @@ spec:
         - /manager
         args:
         - --leader-elect
+        - --sync-period-min
         image: controller:latest
         name: manager
         imagePullPolicy: Always
@@ -58,5 +59,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          - name: SYNC-PERIOD-MIN
+            value: 180
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

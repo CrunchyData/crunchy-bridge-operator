@@ -100,7 +100,6 @@ func createInventories(inventoryName string) *v1alpha1.CrunchyBridgeInventory {
 			Name:      credentialSecret.Name,
 			Namespace: testNamespace,
 		},
-		RequestTimestamp: metav1.Now(),
 	}
 	inventory := &v1alpha1.CrunchyBridgeInventory{
 		ObjectMeta: metav1.ObjectMeta{

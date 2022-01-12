@@ -27,7 +27,7 @@ const (
 	AuthenticationError    string = "AuthenticationError"
 	SyncOK                 string = "SyncOK"
 	ReadyForBinding        string = "ReadyForBinding"
-	InstanceReady          string = "InstanceReady"
+	ProvisionReady         string = "ProvisionReady"
 	Ready                  string = "Ready"
 	NotFound               string = "NotFound"
 	InstanceSuccessMessage string = "Successfully created crunchy bridge cluster"
@@ -70,6 +70,17 @@ func GetConnectonCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 // GetCondition return the condition with the passed condition type from
 // the status object. If the condition is not already present, return nil
 func GetInventoryCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeInventory, condType string) *metav1.Condition {
+	for i := range inv.Status.Conditions {
+		if inv.Status.Conditions[i].Type == condType {
+			return &inv.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+// GetCondition return the condition with the passed condition type from
+// the status object. If the condition is not already present, return nil
+func GetIInstanceCondition(inv *dbaasredhatcomv1alpha1.CrunchyBridgeInstance, condType string) *metav1.Condition {
 	for i := range inv.Status.Conditions {
 		if inv.Status.Conditions[i].Type == condType {
 			return &inv.Status.Conditions[i]

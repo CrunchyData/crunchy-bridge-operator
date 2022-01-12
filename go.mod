@@ -3,7 +3,7 @@ module github.com/CrunchyData/crunchy-bridge-operator
 go 1.16
 
 require (
-	github.com/RHEcosystemAppEng/dbaas-operator v0.1.0
+	github.com/RHEcosystemAppEng/dbaas-operator v0.1.3
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.1.2
 	github.com/jpillora/backoff v1.0.0
@@ -18,4 +18,4 @@ require (
 
 )
 
-replace github.com/RHEcosystemAppEng/dbaas-operator v0.1.0 => github.com/redhatHameed/dbaas-operator v0.0.0-20211222192717-1e4975ae6897
+replace github.com/RHEcosystemAppEng/dbaas-operator v0.1.3 => github.com/RHEcosystemAppEng/dbaas-operator v0.1.4-0.20220119182017-47ff2e6c4905

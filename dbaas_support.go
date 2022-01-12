@@ -25,6 +25,7 @@ func enableDBaaSExtension(mgr ctrl.Manager, cfg mainConfig) {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: cfg.apiURL,
+		Log:        setupLog,
 	}
 
 	if err := inventoryReconciler.SetupWithManager(mgr); err != nil {

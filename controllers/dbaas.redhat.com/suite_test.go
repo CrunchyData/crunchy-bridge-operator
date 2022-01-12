@@ -122,6 +122,7 @@ var _ = BeforeSuite(func() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: crunchybridgeAPIURL,
+		Log:        ctrl.Log.WithName("controllers").WithName("CrunchyBridgeInventoryReconciler"),
 	}
 	err = inventoryReconciler.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
@@ -142,6 +143,14 @@ var _ = BeforeSuite(func() {
 		APIBaseURL: crunchybridgeAPIURL,
 	}
 	err = dbaasredhatcomcontrollers.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	dbaasInstance := &CrunchyBridgeInstanceReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: crunchybridgeAPIURL,
+	}
+	err = dbaasInstance.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

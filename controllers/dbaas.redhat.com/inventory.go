@@ -19,6 +19,8 @@ const (
 	CPU           = "cpu"
 	MEMORY        = "memory"
 	IS_HA         = "is_ha"
+	CLUSTER_NAME  = "name"
+	STATE         = "state"
 )
 
 // discoverInventories query crunchy bridge and return list of inverntories by team
@@ -50,6 +52,7 @@ func (r *CrunchyBridgeInventoryReconciler) discoverInventories(dbaasredhatcomv1a
 				CPU:           strconv.Itoa(cluster.CPU),
 				MEMORY:        strconv.Itoa(cluster.MemoryGB),
 				IS_HA:         strconv.FormatBool(cluster.HighAvailability),
+				STATE:         cluster.State,
 			},
 		}
 		bridgeInstances = append(bridgeInstances, clusterSvc)

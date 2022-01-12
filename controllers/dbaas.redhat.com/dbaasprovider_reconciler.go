@@ -61,6 +61,8 @@ const (
 	TYPELABELNAME          = "type"
 	TYPELABELVALUE         = "dbaas-provider-registration"
 	DBAASPROVIDERKIND      = "DBaaSProvider"
+	PROVISION_DOC_URL      = "https://docs.crunchybridge.com/quickstart/provision"
+	PROVISION_DESCRIPTION  = "At this time, Crunchy Bridge by Crunchy Data is not offering free trial instances. For further information on provisioning paid instances via the Crunchy Bridge platform, please refer to our provisioning documentation."
 )
 
 var labels = map[string]string{RELATEDTOLABELNAME: RELATEDTOLABELVALUE, TYPELABELNAME: TYPELABELVALUE}
@@ -202,7 +204,9 @@ func bridgeProviderCR(clusterRoleList *rbac.ClusterRoleList) *dbaasoperator.DBaa
 					Required:    true,
 				},
 			},
-			AllowsFreeTrial: false,
+			AllowsFreeTrial:              false,
+			ExternalProvisionURL:         PROVISION_DOC_URL,
+			ExternalProvisionDescription: PROVISION_DESCRIPTION,
 			InstanceParameterSpecs: []dbaasoperator.InstanceParameterSpec{
 				{
 					Name:        "Name",
@@ -256,16 +260,6 @@ func bridgeProviderCR(clusterRoleList *rbac.ClusterRoleList) *dbaasoperator.DBaa
 					DisplayName: "High Availability",
 					Type:        "bool",
 					Required:    false,
-				},
-			},
-			InstanceParameterValues: []dbaasoperator.InstanceParameterValue{
-				{
-					ID:           1,
-					Name:         "AWS",
-					Value:        "AWS",
-					DisplayValue: "AWS",
-					IsDefault:    false,
-					Parent:       1,
 				},
 			},
 		},

@@ -37,6 +37,13 @@ spec:
           spec:
             description: DBaaSInstanceSpec defines the desired state of DBaaSInstance
             properties:
+              cloudProvider:
+                description: Identifies the desired cloud infrastructure provider
+                type: string
+              cloudRegion:
+                description: Identifies the requested deployment region within the
+                  cloud provider (e.g. us-east-1)
+                type: string
               inventoryRef:
                 description: A reference to the relevant DBaaSInventory CR
                 properties:
@@ -46,6 +53,8 @@ spec:
                   namespace:
                     description: The namespace where object of known type is stored
                     type: string
+                required:
+                - name
                 type: object
               name:
                 description: The name of this instance in the database service
@@ -53,25 +62,12 @@ spec:
               otherInstanceParams:
                 additionalProperties:
                   type: string
-                description: Any other provider-specific parameters related to create
-                  the instance
+                description: Any other provider-specific parameters related to the
+                  instance provisioning
                 type: object
-              provider:
-                description: identifies the desired cloud infrastructure provider
-                enum:
-                - aws
-                - gcp
-                - azure
-                type: string
-              region:
-                description: identifies the requested deployment region within the
-                  provider (e.g. us-east-1)
-                type: string
             required:
             - inventoryRef
-            - otherInstanceParams
-            - provider
-            - region
+            - name
             type: object
           status:
             description: DBaaSInstanceStatus defines the observed state of DBaaSInstance
@@ -154,13 +150,11 @@ spec:
                 description: Any other provider-specific information related to this
                   instance
                 type: object
-              name:
-                description: The name of this instance in the database service
-                type: string
               phase:
-                description: represents the cluster creation phase pending - creation
-                  not yet started creating - provisioning in progress ready - cluster
-                  provisioning complete
+                description: Represents the cluster provisioning phase pending - provisioning
+                  not yet started creating - provisioning in progress updating - cluster
+                  updating in progress deleting - cluster deletion in progress deleted
+                  - cluster has been deleted ready - cluster provisioning complete
                 type: string
             required:
             - instanceID

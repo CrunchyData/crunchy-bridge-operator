@@ -110,12 +110,6 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 				logger.Info("cluster deleted", "id", id)
 			}
 
-			//Refresh inventory by updating timestamp into inventory CR
-			inventory.Spec.RequestTimestamp = metav1.Now()
-			if err := r.Update(ctx, &inventory); err != nil {
-				return ctrl.Result{}, err
-			}
-
 			controllerutil.RemoveFinalizer(instanceObj, instanceFinalizer)
 			if err := r.Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
@@ -182,23 +176,22 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			logger.Info("cluster creating", "name", instanceObj.Spec.Name)
 
 			if err := r.updateStatusFromDetail(detC, &instanceObj.Status); err != nil {
+				statusErr := r.updateStatus(instanceObj, metav1.ConditionFalse, BackendError, err.Error())
+				if statusErr != nil {
+					logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
+					return ctrl.Result{Requeue: true}, statusErr
+				}
 				return ctrl.Result{}, err
 			}
 
 			if readyNow := (detC.State == string(bridgeapi.StateReady)); readyNow {
 				instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseReady
-				logger.Info("cluster created", "name", instanceObj.Spec.Name)
-
-				//Refresh inventory by updating timestamp into inventory CR
-				inventory.Spec.RequestTimestamp = metav1.Now()
-				if err := r.Update(ctx, &inventory); err != nil {
-					return ctrl.Result{}, err
-				}
 				statusErr := r.updateStatus(instanceObj, metav1.ConditionTrue, Ready, InstanceSuccessMessage)
 				if statusErr != nil {
-					logger.Error(statusErr, "Error in updating CrunchyBridgeInventory status")
+					logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
 					return ctrl.Result{Requeue: true}, statusErr
 				}
+				logger.Info("cluster created", "name", instanceObj.Spec.Name)
 			}
 
 			//instanceObj.Status.Updated = time.Now().Format(time.RFC3339)
@@ -239,13 +232,22 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 	var req bridgeapi.CreateRequest
 
 	req.Name = spec.Name
-	req.Provider = spec.Provider
-	req.Region = spec.Region
+	req.Provider = spec.CloudProvider
+	req.Region = spec.CloudRegion
 	if teamID, ok := spec.OtherInstanceParams["TeamID"]; ok {
 		req.TeamID = teamID
+	} else {
+		// Lookup TeamID
+		if id, err := bridgeapiClient.DefaultTeamID(); err != nil {
+			return req, err
+		} else {
+			req.TeamID = id
+		}
 	}
 	if majorVersion, ok := spec.OtherInstanceParams["PGMajorVer"]; ok {
 		req.PGMajorVersion = convertInt(majorVersion)
+	} else {
+		req.PGMajorVersion = 13
 	}
 
 	if plan, ok := spec.OtherInstanceParams["Plan"]; ok {
@@ -256,15 +258,6 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 	}
 	if isHA, ok := spec.OtherInstanceParams["HighAvail"]; ok {
 		req.HighAvailability = convertBool(isHA)
-	}
-
-	if tid := req.TeamID; tid == "" {
-		// Lookup TeamID
-		if id, err := bridgeapiClient.DefaultTeamID(); err != nil {
-			return req, err
-		} else {
-			req.TeamID = id
-		}
 	}
 
 	return req, nil
@@ -293,8 +286,8 @@ func (r *CrunchyBridgeInstanceReconciler) updateStatusFromDetail(
 		return errors.New("received cluster detail with no ID")
 	}
 	statusObj.InstanceID = det.ID
-	statusObj.Name = det.Name
 	statusObj.InstanceInfo = map[string]string{
+		CLUSTER_NAME:  det.Name,
 		TEAM_ID:       det.TeamID,
 		CPU:           strconv.Itoa(det.CPU),
 		MEMORY:        strconv.Itoa(det.MemoryGB),
@@ -310,7 +303,7 @@ func (r *CrunchyBridgeInstanceReconciler) updateStatusFromDetail(
 
 // updateStatus
 func (r *CrunchyBridgeInstanceReconciler) updateStatus(instanceObj *dbaasredhatcomv1alpha1.CrunchyBridgeInstance, conidtionStatus metav1.ConditionStatus, reason, message string) error {
-	setStatusCondition(instanceObj, InstanceReady, conidtionStatus, reason, message)
+	setStatusCondition(instanceObj, ProvisionReady, conidtionStatus, reason, message)
 	if err := r.Client.Status().Update(context.Background(), instanceObj); err != nil {
 		return err
 	}
