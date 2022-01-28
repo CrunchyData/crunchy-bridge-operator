@@ -20,18 +20,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
-	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
+
+	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strconv"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"

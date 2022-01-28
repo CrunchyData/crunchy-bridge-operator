@@ -19,8 +19,12 @@ package dbaasredhatcom
 import (
 	"context"
 	"fmt"
+
 	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
+
+	"os"
+	"time"
 
 	v1 "k8s.io/api/apps/v1"
 	rbac "k8s.io/api/rbac/v1"
@@ -32,13 +36,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
 )
 
 const (

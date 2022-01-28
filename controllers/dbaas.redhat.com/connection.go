@@ -17,17 +17,20 @@ package dbaasredhatcom
 
 import (
 	"context"
-	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
-	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ptr "k8s.io/utils/pointer"
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+
 	"net"
 	"net/url"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ptr "k8s.io/utils/pointer"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (

@@ -52,6 +52,8 @@ metadata:
             "name": "crunchybridgeinstance-sample"
           },
           "spec": {
+            "cloudProvider": "aws",
+            "cloudRegion": "us-east-1",
             "inventoryRef": {
               "name": "my-db-provider-account",
               "namespace": "openshift-dbaas-operator"
@@ -63,9 +65,7 @@ metadata:
               "Plan": "hobby-2",
               "Storage": "100",
               "TeamID": "vp6hlxjcl5g73furjiztcrr2vi"
-            },
-            "provider": "aws",
-            "region": "us-east-1"
+            }
           }
         },
         {

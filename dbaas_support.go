@@ -5,9 +5,10 @@ package main
 import (
 	"os"
 
+	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
+
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	dbaasredhatcomcontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/dbaas.redhat.com"
-	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
