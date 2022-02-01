@@ -22,9 +22,9 @@ import (
 
 const (
 	PhaseUnknown  = ""
-	PhasePending  = "pending"
-	PhaseCreating = "creating"
-	PhaseReady    = "ready"
+	PhasePending  = "Pending"
+	PhaseCreating = "Creating"
+	PhaseReady    = "Ready"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

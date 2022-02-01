@@ -110,6 +110,32 @@ rules:
 - apiGroups:
   - dbaas.redhat.com
   resources:
+  - crunchybridgeinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinstances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinstances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
   - crunchybridgeinventories
   verbs:
   - create

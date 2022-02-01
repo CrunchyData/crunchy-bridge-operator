@@ -18,13 +18,14 @@ package dbaasredhatcom
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
 	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -94,6 +95,9 @@ var _ = BeforeSuite(func() {
 	err = apiextv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = dbaasredhatcomv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:scheme
 
 	ctx = context.Background()
@@ -118,6 +122,7 @@ var _ = BeforeSuite(func() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: crunchybridgeAPIURL,
+		Log:        ctrl.Log.WithName("controllers").WithName("CrunchyBridgeInventoryReconciler"),
 	}
 	err = inventoryReconciler.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
@@ -138,6 +143,14 @@ var _ = BeforeSuite(func() {
 		APIBaseURL: crunchybridgeAPIURL,
 	}
 	err = dbaasredhatcomcontrollers.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	dbaasInstance := &CrunchyBridgeInstanceReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: crunchybridgeAPIURL,
+	}
+	err = dbaasInstance.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

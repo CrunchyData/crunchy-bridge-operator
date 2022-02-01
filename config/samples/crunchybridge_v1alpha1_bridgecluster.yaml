@@ -5,8 +5,10 @@ metadata:
 spec:
   name: TestCluster
   plan: hobby-2
-  storage: 10
+  team_id: vp6hlxjcl5g73furjiztcrr2vi
+  storage: 100
   provider: aws
   region: us-east-1
-  pg_major_version: 12
+  pg_major_version: 14
+  enable_ha: false
 

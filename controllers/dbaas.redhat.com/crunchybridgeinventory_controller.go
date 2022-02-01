@@ -20,17 +20,20 @@ import (
 	"context"
 	"net/url"
 
-	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
-	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
-	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
-
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/kubeadapter"
 )
 
 // CrunchyBridgeInventoryReconciler reconciles a CrunchyBridgeInventory object
@@ -38,6 +41,7 @@ type CrunchyBridgeInventoryReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
 	APIBaseURL string
+	Log        logr.Logger
 }
 
 //+kubebuilder:rbac:groups=dbaas.redhat.com,resources=crunchybridgeinventories,verbs=get;list;watch;create;update;patch;delete
@@ -127,7 +131,24 @@ func (r *CrunchyBridgeInventoryReconciler) updateStatus(ctx context.Context, inv
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CrunchyBridgeInventoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	log := r.Log.WithValues("during", "CrunchyBridgeInventoryReconciler SetupWithManager")
+
+	mapFn := handler.MapFunc(func(a client.Object) []ctrl.Request {
+		if instance, ok := a.(*dbaasredhatcomv1alpha1.CrunchyBridgeInstance); ok {
+			log.Info("Equeuing CrunchyBridgeInventory from CrunchyBridgeInstance", "Inventory", instance.Spec.InventoryRef)
+			return []ctrl.Request{
+				{NamespacedName: types.NamespacedName{
+					Name:      instance.Spec.InventoryRef.Name,
+					Namespace: instance.Spec.InventoryRef.Namespace,
+				},
+				}}
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dbaasredhatcomv1alpha1.CrunchyBridgeInventory{}).
+		Watches(&source.Kind{Type: &dbaasredhatcomv1alpha1.CrunchyBridgeInstance{}}, handler.EnqueueRequestsFromMapFunc(mapFn)).
 		Complete(r)
 }

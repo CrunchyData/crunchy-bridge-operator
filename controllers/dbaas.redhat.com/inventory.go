@@ -1,11 +1,13 @@
 package dbaasredhatcom
 
 import (
-	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
-	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
+	"strconv"
+
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
-	"strconv"
+
+	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
+	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 )
 
 const (
@@ -19,6 +21,8 @@ const (
 	CPU           = "cpu"
 	MEMORY        = "memory"
 	IS_HA         = "is_ha"
+	CLUSTER_NAME  = "name"
+	STATE         = "state"
 )
 
 // discoverInventories query crunchy bridge and return list of inverntories by team
@@ -50,6 +54,7 @@ func (r *CrunchyBridgeInventoryReconciler) discoverInventories(dbaasredhatcomv1a
 				CPU:           strconv.Itoa(cluster.CPU),
 				MEMORY:        strconv.Itoa(cluster.MemoryGB),
 				IS_HA:         strconv.FormatBool(cluster.HighAvailability),
+				STATE:         cluster.State,
 			},
 		}
 		bridgeInstances = append(bridgeInstances, clusterSvc)

@@ -20,6 +20,7 @@ import (
 	"flag"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,6 +73,8 @@ func main() {
 	var enableLeaderElection bool
 
 	var crunchybridgeAPIURL string
+
+	var syncPeriod time.Duration
 	// Namespace and Name for APIKey secret default values
 	credNamespace := "default"
 	credName := "crunchybridge_api_key"
@@ -84,6 +87,8 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.DurationVar(&syncPeriod, "sync-period-min", 180*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 30 minutes)")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -105,6 +110,12 @@ func main() {
 	if ks, ok := os.LookupEnv("API_CRED_SECRET_FIELD"); ok {
 		keySecret = ks
 	}
+	if sp, ok := os.LookupEnv("SYNC-PERIOD-MIN"); ok {
+		spInt, err := strconv.Atoi(sp)
+		if err == nil {
+			syncPeriod = time.Duration(spInt) * time.Minute
+		}
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -113,6 +124,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0b67260c.crunchydata.com",
+		SyncPeriod:             &syncPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

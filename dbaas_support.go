@@ -5,9 +5,10 @@ package main
 import (
 	"os"
 
+	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
+
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	dbaasredhatcomcontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/dbaas.redhat.com"
-	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,6 +26,7 @@ func enableDBaaSExtension(mgr ctrl.Manager, cfg mainConfig) {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		APIBaseURL: cfg.apiURL,
+		Log:        setupLog,
 	}
 
 	if err := inventoryReconciler.SetupWithManager(mgr); err != nil {
@@ -51,6 +53,15 @@ func enableDBaaSExtension(mgr ctrl.Manager, cfg mainConfig) {
 		APIBaseURL: cfg.apiURL,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeConnection")
+		os.Exit(1)
+	}
+
+	if err := (&dbaasredhatcomcontrollers.CrunchyBridgeInstanceReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		APIBaseURL: cfg.apiURL,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CrunchyBridgeInstance")
 		os.Exit(1)
 	}
 

@@ -1,0 +1,24 @@
+# permissions for end users to edit crunchybridgeinstances.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crunchybridgeinstance-editor-role
+rules:
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.redhat.com
+  resources:
+  - crunchybridgeinstances/status
+  verbs:
+  - get

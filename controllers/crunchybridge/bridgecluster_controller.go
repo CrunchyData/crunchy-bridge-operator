@@ -141,6 +141,7 @@ func (r *BridgeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				}
 				detC = c
 			}
+			logger.Info("cluster creating", "name", clusterObj.Spec.Name)
 
 			if err := r.updateStatusFromDetail(detC, &clusterObj.Status); err != nil {
 				return ctrl.Result{}, err
