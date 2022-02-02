@@ -19,13 +19,11 @@ package dbaasredhatcom
 import (
 	"context"
 	"fmt"
-
-	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
-	"github.com/go-logr/logr"
-
 	"os"
 	"time"
 
+	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

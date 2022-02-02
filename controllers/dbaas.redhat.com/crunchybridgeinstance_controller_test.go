@@ -1,6 +1,8 @@
 package dbaasredhatcom
 
 import (
+	"time"
+
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -9,8 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
-
-	"time"
 )
 
 var _ = Describe("CrunchyBridgeInstance controller ", func() {
