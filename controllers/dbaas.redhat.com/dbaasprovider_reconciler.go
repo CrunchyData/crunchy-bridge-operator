@@ -62,7 +62,7 @@ const (
 	TYPELABELVALUE         = "dbaas-provider-registration"
 	DBAASPROVIDERKIND      = "DBaaSProvider"
 	PROVISION_DOC_URL      = "https://docs.crunchybridge.com/quickstart/provision"
-	PROVISION_DESCRIPTION  = "At this time, Crunchy Bridge by Crunchy Data is not offering free trial instances. For further information on provisioning paid instances via the Crunchy Bridge platform, please refer to our provisioning documentation."
+	PROVISION_DESCRIPTION  = "Crunchy Bridge by Crunchy Data offers free trial instances through RHODA. To provision a trial instance, provision through RHODA using default parameters or specify the plan as 'trial'. For further information on provisioning paid instances via the Crunchy Bridge platform, please refer to our provisioning documentation."
 )
 
 var labels = map[string]string{RELATEDTOLABELNAME: RELATEDTOLABELVALUE, TYPELABELNAME: TYPELABELVALUE}
@@ -204,7 +204,7 @@ func bridgeProviderCR(clusterRoleList *rbac.ClusterRoleList) *dbaasoperator.DBaa
 					Required:    true,
 				},
 			},
-			AllowsFreeTrial:              false,
+			AllowsFreeTrial:              true,
 			ExternalProvisionURL:         PROVISION_DOC_URL,
 			ExternalProvisionDescription: PROVISION_DESCRIPTION,
 			InstanceParameterSpecs: []dbaasoperator.InstanceParameterSpec{
