@@ -251,7 +251,7 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 		req.Plan = plan
 	}
 	if storage, ok := spec.OtherInstanceParams["Storage"]; ok {
-		req.StorageMB = convertInt(storage)
+		req.StorageGB = convertInt(storage)
 	}
 	if isHA, ok := spec.OtherInstanceParams["HighAvail"]; ok {
 		req.HighAvailability = convertBool(isHA)
@@ -288,7 +288,7 @@ func (r *CrunchyBridgeInstanceReconciler) updateStatusFromDetail(
 		TEAM_ID:       det.TeamID,
 		CPU:           strconv.Itoa(det.CPU),
 		MEMORY:        strconv.Itoa(det.MemoryGB),
-		STORAGE:       strconv.Itoa(det.StorageMB),
+		STORAGE:       strconv.Itoa(det.StorageGB),
 		MAJOR_VERSION: strconv.Itoa(det.PGMajorVersion),
 		IS_HA:         strconv.FormatBool(det.HighAvailability),
 		PROVIDER_ID:   det.ProviderID,

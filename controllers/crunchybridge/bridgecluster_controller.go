@@ -191,7 +191,7 @@ func (r *BridgeClusterReconciler) createFromSpec(spec crunchybridgev1alpha1.Brid
 		Name:             spec.Name,
 		TeamID:           spec.TeamID,
 		Plan:             spec.Plan,
-		StorageMB:        spec.StorageMB,
+		StorageGB:        spec.StorageGB,
 		Provider:         spec.Provider,
 		Region:           spec.Region,
 		PGMajorVersion:   spec.PGMajorVer,
@@ -230,7 +230,7 @@ func (r *BridgeClusterReconciler) updateStatusFromDetail(
 	// What
 	statusObj.Cluster.CPU = det.CPU
 	statusObj.Cluster.MemoryGB = det.MemoryGB
-	statusObj.Cluster.StorageMB = det.StorageMB
+	statusObj.Cluster.StorageGB = det.StorageGB
 	statusObj.Cluster.PGMajorVer = det.PGMajorVersion
 	statusObj.Cluster.HighAvail = det.HighAvailability
 	// When

@@ -81,7 +81,7 @@ type CreateRequest struct {
 	Name             string `json:"name"`
 	TeamID           string `json:"team_id"`
 	Plan             string `json:"plan_id"`
-	StorageMB        int    `json:"storage"`
+	StorageGB        int    `json:"storage"`
 	Provider         string `json:"provider_id"`
 	Region           string `json:"region_id"`
 	PGMajorVersion   int    `json:"major_version"`
@@ -104,7 +104,7 @@ type ClusterDetail struct {
 	ProviderID       string          `json:"provider_id"`
 	RegionID         string          `json:"region_id"`
 	State            string          `json:"state"` // Leave as string until graceful error handling
-	StorageMB        int             `json:"storage"`
+	StorageGB        int             `json:"storage"`
 	TeamID           string          `json:"team_id"`
 	Updated          time.Time       `json:"updated_at"`
 	Replicas         []ClusterDetail `json:"replicas"`

@@ -67,7 +67,7 @@ spec:
                 type: string
               storage:
                 description: identifies the size of PostgreSQL database volume in
-                  megabytes
+                  gigabytes
                 maximum: 65535
                 minimum: 10
                 type: integer
@@ -119,7 +119,7 @@ spec:
                     description: represents the region location for the cluster
                     type: string
                   storage:
-                    description: represents the database volume size in megabytes
+                    description: represents the database volume size in gigabytes
                     type: integer
                   team_id:
                     description: represents the ID of the team which owns the cluster

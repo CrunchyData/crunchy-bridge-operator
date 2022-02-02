@@ -43,10 +43,10 @@ type BridgeClusterSpec struct {
 	TeamID string `json:"team_id"`
 	// identifies the Crunchy Bridge provioning plan (e.g. hobby-2, standard-8)
 	Plan string `json:"plan"`
-	// identifies the size of PostgreSQL database volume in megabytes
+	// identifies the size of PostgreSQL database volume in gigabytes
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:Maximum=65535
-	StorageMB int `json:"storage"`
+	StorageGB int `json:"storage"`
 	// identifies the desired cloud infrastructure provider
 	// +kubebuilder:validation:Enum=aws;gcp;azure
 	Provider string `json:"provider"`
@@ -89,8 +89,8 @@ type ClusterStatus struct {
 	CPU int `json:"cpu"`
 	// represents the plan-allocated memory in gigabytes
 	MemoryGB int `json:"memory"`
-	// represents the database volume size in megabytes
-	StorageMB int `json:"storage"`
+	// represents the database volume size in gigabytes
+	StorageGB int `json:"storage"`
 	// represents the PostgreSQL major version number
 	PGMajorVer int `json:"major_version"`
 	// represents whether the cluster has high availability enabled

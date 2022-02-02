@@ -71,10 +71,9 @@ func main() {
 	// Variables from boilerplate
 	var metricsAddr, probeAddr string
 	var enableLeaderElection bool
-
 	var crunchybridgeAPIURL string
-
 	var syncPeriod time.Duration
+
 	// Namespace and Name for APIKey secret default values
 	credNamespace := "default"
 	credName := "crunchybridge_api_key"

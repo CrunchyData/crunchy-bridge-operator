@@ -50,7 +50,7 @@ func (r *CrunchyBridgeInventoryReconciler) discoverInventories(dbaasredhatcomv1a
 				CREATED_AT:    cluster.Created.String(),
 				UPDATED_AT:    cluster.Updated.String(),
 				MAJOR_VERSION: strconv.Itoa(cluster.PGMajorVersion),
-				STORAGE:       strconv.Itoa(cluster.StorageMB),
+				STORAGE:       strconv.Itoa(cluster.StorageGB),
 				CPU:           strconv.Itoa(cluster.CPU),
 				MEMORY:        strconv.Itoa(cluster.MemoryGB),
 				IS_HA:         strconv.FormatBool(cluster.HighAvailability),
