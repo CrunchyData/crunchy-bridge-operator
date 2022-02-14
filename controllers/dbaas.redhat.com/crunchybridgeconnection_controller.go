@@ -72,7 +72,11 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 	inventory := dbaasredhatcomv1alpha1.CrunchyBridgeInventory{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: connection.Spec.InventoryRef.Namespace, Name: connection.Spec.InventoryRef.Name}, &inventory); err != nil {
 		if apierrors.IsNotFound(err) {
-			// CR deleted since request queued, child objects getting GC'd, no requeue
+			statusErr := r.updateStatus(ctx,connection, metav1.ConditionFalse, InventoryNotFound, err.Error())
+			if statusErr != nil {
+				logger.Error(statusErr, "Error in updating CrunchyBridgeConnection status")
+				return ctrl.Result{Requeue: true}, statusErr
+			}
 			logger.Info("inventory resource not found, has been deleted")
 			return ctrl.Result{}, err
 		}

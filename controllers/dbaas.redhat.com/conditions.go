@@ -26,6 +26,7 @@ const (
 	SpecSynced             string = "SpecSynced"
 	BackendError           string = "BackendError"
 	AuthenticationError    string = "AuthenticationError"
+	InventoryNotFound      string = "InventoryNotFound"
 	SyncOK                 string = "SyncOK"
 	ReadyForBinding        string = "ReadyForBinding"
 	ProvisionReady         string = "ProvisionReady"

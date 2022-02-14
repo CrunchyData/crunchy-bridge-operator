@@ -25,6 +25,7 @@ const (
 	PhasePending  = "Pending"
 	PhaseCreating = "Creating"
 	PhaseReady    = "Ready"
+	PhaseDeleting = "Deleting"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
