@@ -1,6 +1,7 @@
 # Crunchy Bridge Operator
 
 ## Building the Operator
+**if you are using podman instead of docker set CONTAINER_ENGINE as podman** `export CONTAINER_ENGINE=podman`
 - Build Operator `make build`
 - For build and push the operator image, operator-bundle image and operator-catalog image to a registry run:  `make release`**make sure change the registry under -  `Makefile` and set `ORG` with your own Quay.io Org!**
 - `make release` is commented out while the release process is being considered
