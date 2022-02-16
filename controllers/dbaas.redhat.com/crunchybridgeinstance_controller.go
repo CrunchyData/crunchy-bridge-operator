@@ -77,7 +77,11 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	inventory := dbaasredhatcomv1alpha1.CrunchyBridgeInventory{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: instanceObj.Spec.InventoryRef.Namespace, Name: instanceObj.Spec.InventoryRef.Name}, &inventory); err != nil {
 		if apierrors.IsNotFound(err) {
-			// CR deleted since request queued, child objects getting GC'd, no requeue
+			statusErr := r.updateStatus(instanceObj, metav1.ConditionFalse, InventoryNotFound, err.Error())
+			if statusErr != nil {
+				logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
+				return ctrl.Result{Requeue: true}, statusErr
+			}
 			logger.Info("inventory resource not found, has been deleted")
 			return ctrl.Result{}, err
 		}
@@ -101,7 +105,18 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		if listContains(instanceObj.Finalizers, instanceFinalizer) {
 			if id := instanceObj.Status.InstanceID; id != "" {
 				logger.Info("deleting cluster", "id", id)
+				instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseDeleting
+				if err := r.Status().Update(ctx, instanceObj); err != nil {
+					if apierrors.IsConflict(err) {
+						logger.Info("Instance modified, retry reconciling")
+						return ctrl.Result{Requeue: true}, nil
+					}
+					logger.Error(err, "Failed to update Instance phase in status")
+					return ctrl.Result{}, err
+				}
 				if err := bridgeapiClient.DeleteCluster(id); err != nil {
+					logger.Error(err, "Failed to delete a cluster")
+
 					return ctrl.Result{}, err
 				}
 				logger.Info("cluster deleted", "id", id)
@@ -111,7 +126,9 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			if err := r.Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
+
 		}
+
 	} else {
 		switch instanceObj.Status.Phase {
 		case crunchybridgev1alpha1.PhaseUnknown:
@@ -119,6 +136,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			if !listContains(instanceObj.Finalizers, instanceFinalizer) {
 				controllerutil.AddFinalizer(instanceObj, instanceFinalizer)
 				if err := r.Update(ctx, instanceObj); err != nil {
+					logger.Error(err, "Failed to add finalizer to Instance")
 					return ctrl.Result{}, err
 				}
 			}
@@ -144,13 +162,11 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 					logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
 					return ctrl.Result{Requeue: true}, statusErr
 				}
-
 				return ctrl.Result{}, err
 			}
 
 			// Assuming the request was sent, update phase
 			instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseCreating
-			//instanceObj.Status.Updated = time.Now().Format(time.RFC3339)
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -191,7 +207,6 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 				logger.Info("cluster created", "name", instanceObj.Spec.Name)
 			}
 
-			//instanceObj.Status.Updated = time.Now().Format(time.RFC3339)
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
