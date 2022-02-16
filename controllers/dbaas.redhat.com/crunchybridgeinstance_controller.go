@@ -230,8 +230,8 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 		Name:           spec.Name,
 		PGMajorVersion: 13,
 		Plan:           "trial",
-		Provider:       "aws",
-		Region:         "us-east-1",
+		Provider:       spec.CloudProvider,
+		Region:         spec.CloudRegion,
 	}
 
 	if teamID, ok := spec.OtherInstanceParams["TeamID"]; ok {
@@ -264,15 +264,16 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 	// trial configuration
 	if req.Plan == "trial" {
 		req.StorageGB = 10
-		if spec.CloudRegion == "aws" {
-			// Allow requesting region if requesting on AWS, where trials
-			// are allowed
-			req.Region = spec.CloudRegion
-		}
 		req.HighAvailability = false
-	} else {
-		req.Provider = spec.CloudProvider
-		req.Region = spec.CloudRegion
+		req.Plan = "hobby-2"
+		req.Trial = true
+
+		// Allow requesting region if requesting on AWS, where trials
+		// are allowed, otherwise overwrite requested to trial-allowed
+		if spec.CloudProvider != "aws" {
+			req.Provider = "aws"
+			req.Region = "us-east-1"
+		}
 	}
 
 	return req, nil

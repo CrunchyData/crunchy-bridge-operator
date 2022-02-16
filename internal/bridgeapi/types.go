@@ -86,6 +86,7 @@ type CreateRequest struct {
 	Region           string `json:"region_id"`
 	PGMajorVersion   int    `json:"major_version"`
 	HighAvailability bool   `json:"is_ha"`
+	Trial            bool   `json:"is_trial"`
 }
 
 type ClusterList struct {
