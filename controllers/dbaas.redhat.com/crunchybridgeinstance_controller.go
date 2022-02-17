@@ -241,11 +241,14 @@ func listContains(list []string, s string) bool {
 }
 
 func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaaSInstanceSpec, bridgeapiClient *bridgeapi.Client) (bridgeapi.CreateRequest, error) {
-	var req bridgeapi.CreateRequest
+	req := bridgeapi.CreateRequest{
+		Name:           spec.Name,
+		PGMajorVersion: 13,
+		Plan:           "trial",
+		Provider:       spec.CloudProvider,
+		Region:         spec.CloudRegion,
+	}
 
-	req.Name = spec.Name
-	req.Provider = spec.CloudProvider
-	req.Region = spec.CloudRegion
 	if teamID, ok := spec.OtherInstanceParams["TeamID"]; ok {
 		req.TeamID = teamID
 	} else {
@@ -256,10 +259,9 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 			req.TeamID = id
 		}
 	}
+
 	if majorVersion, ok := spec.OtherInstanceParams["PGMajorVer"]; ok {
 		req.PGMajorVersion = convertInt(majorVersion)
-	} else {
-		req.PGMajorVersion = 13
 	}
 
 	if plan, ok := spec.OtherInstanceParams["Plan"]; ok {
@@ -270,6 +272,23 @@ func (r *CrunchyBridgeInstanceReconciler) createFromSpec(spec dbaasv1alpha1.DBaa
 	}
 	if isHA, ok := spec.OtherInstanceParams["HighAvail"]; ok {
 		req.HighAvailability = convertBool(isHA)
+	}
+
+	// Treat "default" plan as a request for trial. This ends up ignoring
+	// the requested Cloud* attributes and other attributes forced by the
+	// trial configuration
+	if req.Plan == "trial" {
+		req.StorageGB = 10
+		req.HighAvailability = false
+		req.Plan = "hobby-2"
+		req.Trial = true
+
+		// Allow requesting region if requesting on AWS, where trials
+		// are allowed, otherwise overwrite requested to trial-allowed
+		if spec.CloudProvider != "aws" {
+			req.Provider = "aws"
+			req.Region = "us-east-1"
+		}
 	}
 
 	return req, nil
