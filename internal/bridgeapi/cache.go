@@ -66,7 +66,7 @@ func (mc *managerCache) GetSession(authURL *url.URL, cp CredentialProvider, logg
 		// At this point, the incoming CredentialProvider is known good, or
 		// the lookup key would have failed. If there's any scenario where
 		// the pre-existing provider isn't providing correct results, we can
-		// blindly refresh it here since we know the previously-known-good
+		// blindly refresh it here. Since we know the previously-known-good
 		// provider produced the same cache key as the current this is a
 		// fair substitution. Worst case, this block never gets run.
 		//
