@@ -116,6 +116,7 @@ func (c *Client) precheck() error {
 }
 
 func (c *Client) GetLoginState() LoginState {
+	c.log.Info("session state",c.session.State)
 	return c.session.State()
 }
 
