@@ -1,3 +1,4 @@
+//go:build dbaas
 // +build dbaas
 
 package main

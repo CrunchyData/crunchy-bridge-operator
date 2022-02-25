@@ -42,10 +42,12 @@ type managerCache struct {
 }
 
 func (mc *managerCache) GetSession(authURL *url.URL, cp CredentialProvider, logger logr.Logger) (*loginManager, error) {
-	label, err := cacheLabel(authURL, cp)
+	cred, err := cp.ProvideCredential()
 	if err != nil {
 		return nil, err
 	}
+	label := authURL.String() + cred.Key + cred.Secret
+
 	var lm *loginManager
 
 	mc.Lock()
@@ -53,6 +55,32 @@ func (mc *managerCache) GetSession(authURL *url.URL, cp CredentialProvider, logg
 	if node, ok := mc.store[label]; ok {
 		node.count = node.count + 1
 		lm = node.lm
+
+		// The following is a guess at a potential issue resolution, the
+		// issue is not, to date, reproducible in a useful-to-verify way.
+		//
+		// In rare instances, the cached login session fails to renew its
+		// login state and doesn't seem to be able to do so otherwise despite
+		// client calls ensuring a refreshed state.
+		//
+		// At this point, the incoming CredentialProvider is known good, or
+		// the lookup key would have failed. If there's any scenario where
+		// the pre-existing provider isn't providing correct results, we can
+		// blindly refresh it here since we know the previously-known-good
+		// provider produced the same cache key as the current this is a
+		// fair substitution. Worst case, this block never gets run.
+		//
+		// However, let's spit something in the logs so we have a possibility
+		// of confirming this mismatch.
+		//
+		if c, err := node.lm.loginSource.ProvideCredential(); err != nil || c.Key != cred.Key || c.Secret != cred.Secret {
+			lm.log.Info("loginSource no longer valid, auto-recovering",
+				"loginSource key", c.Key, "error", err)
+			// Forcibly replace loginSource with known-good
+			lm.loginSource = cp
+			lm.Ping()
+		}
+
 		mc.store[label] = node
 	} else {
 		newNode := slot{
@@ -85,12 +113,4 @@ func (mc *managerCache) Release(lm *loginManager) {
 			delete(mc.store, lbl)
 		}
 	}
-}
-
-func cacheLabel(authURL *url.URL, cp CredentialProvider) (string, error) {
-	cred, err := cp.ProvideCredential()
-	if err != nil {
-		return "", err
-	}
-	return authURL.String() + cred.Key + cred.Secret, nil
 }
