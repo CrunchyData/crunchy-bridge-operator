@@ -122,3 +122,8 @@ type tokenResponse struct {
 	Token     string `json:"access_token"`
 	TokenID   string `json:"id"`
 }
+
+type APIMessage struct {
+	Message   string `json:"message"`
+	RequestID string `json:"request_id"`
+}

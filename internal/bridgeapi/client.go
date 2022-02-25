@@ -165,13 +165,27 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 	}
 	defer resp.Body.Close()
 
+	// APIMessage is the default response format when the API function doesn't
+	// return the documented response type
+	var mesg APIMessage
+	if resp.StatusCode != http.StatusCreated {
+		err = json.NewDecoder(resp.Body).Decode(&mesg)
+		if err != nil {
+			c.log.Error(err, "error unmarshaling API error response")
+			// Move forward with errors based on http code
+			mesg.Message = "unable to retrieve further error details"
+		}
+	}
+
 	switch resp.StatusCode {
 	case http.StatusCreated:
 		return nil
 	case http.StatusBadRequest:
-		return ErrorBadRequest
+		c.log.Info("Create API bad request message", "message", mesg.Message, "request_id", mesg.RequestID)
+		return fmt.Errorf("%w: %s", ErrorBadRequest, mesg.Message)
 	case http.StatusConflict:
-		return ErrorConflict
+		c.log.Info("Create API conflict message", "message", mesg.Message, "request_id", mesg.RequestID)
+		return fmt.Errorf("%w: %s", ErrorConflict, mesg.Message)
 	default:
 		c.log.Info("unrecognized return status from create call", "statusCode", resp.StatusCode)
 		return nil
