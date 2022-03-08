@@ -117,7 +117,11 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 		SecretField: SECRETFIELDNAME,
 	}
 
-	return bridgeapi.NewClient(baseUrl, kubeSecretProvider, bridgeapi.SetLogger(logger))
+	return bridgeapi.NewClient(baseUrl,
+		kubeSecretProvider,
+		bridgeapi.SetLogger(logger),
+		bridgeapi.SetVersion("0.0.2"), // hard coded for now to minimize change
+	)
 }
 
 // updateStatus
