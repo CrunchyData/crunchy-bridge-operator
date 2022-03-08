@@ -30,7 +30,7 @@ import (
 
 var (
 	routeClusters    string = "/clusters"
-	routeDefaultRole string = "/clusters/%s/roles/default"
+	routeDefaultRole string = "/clusters/%s/roles/postgres"
 	routeTeams       string = "/teams"
 )
 
