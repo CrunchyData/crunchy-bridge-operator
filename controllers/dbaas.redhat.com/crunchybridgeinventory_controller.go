@@ -19,6 +19,7 @@ package dbaasredhatcom
 import (
 	"context"
 	"net/url"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,8 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
@@ -151,8 +155,38 @@ func (r *CrunchyBridgeInventoryReconciler) SetupWithManager(mgr ctrl.Manager) er
 		return nil
 	})
 
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&dbaasredhatcomv1alpha1.CrunchyBridgeInventory{}).
-		Watches(&source.Kind{Type: &dbaasredhatcomv1alpha1.CrunchyBridgeInstance{}}, handler.EnqueueRequestsFromMapFunc(mapFn)).
-		Complete(r)
+	c, err := controller.New("CrunchyBridgeInventory", mgr, controller.Options{Reconciler: r})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to primary resource MongoDBAtlasInventory & handle delete separately
+	err = c.Watch(&source.Kind{Type: &dbaasredhatcomv1alpha1.CrunchyBridgeInventory{}},
+		&handler.EnqueueRequestForObject{},
+		CommonPredicates())
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to other resource CrunchyBridgeInstance
+	err = c.Watch(&source.Kind{Type: &dbaasredhatcomv1alpha1.CrunchyBridgeInstance{}},
+		handler.EnqueueRequestsFromMapFunc(mapFn))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CommonPredicates returns the predicate which filter out the changes done to any field except for spec (e.g. status)
+// Also we should reconcile if finalizers have changed (see https://blog.openshift.com/kubernetes-operators-best-practices/)
+func CommonPredicates() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() && reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers()) {
+				return false
+			}
+			return true
+		},
+	}
 }
