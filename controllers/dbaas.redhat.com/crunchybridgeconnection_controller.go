@@ -23,13 +23,15 @@ import (
 	dbaasv1alpha1 "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 )
@@ -125,9 +127,20 @@ func (r *CrunchyBridgeConnectionReconciler) Reconcile(ctx context.Context, req c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CrunchyBridgeConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&dbaasredhatcomv1alpha1.CrunchyBridgeConnection{}).
-		Complete(r)
+	c, err := controller.New("CrunchyBridgeConnection", mgr, controller.Options{Reconciler: r})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to primary resource CrunchyBridgeConnection & handle delete separately
+	err = c.Watch(&source.Kind{Type: &dbaasredhatcomv1alpha1.CrunchyBridgeConnection{}},
+		&handler.EnqueueRequestForObject{},
+		CommonPredicates())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // getInstance returns an instance from the inventory based on instanceID
