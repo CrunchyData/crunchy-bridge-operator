@@ -80,7 +80,6 @@ Administrator will first create the secret with Application ID and Application S
 
 ```
 kubectl create secret generic crunchy-bridge-api-key  --from-literal="publicApiKey=<Application ID>"   --from-literal="privateApiSecret=<Application Secret>"   -n crunchy-bridge-operator-system
-kubectl label secret crunchy-bridge-api-key db-operator/type=credentials -n crunchy-bridge-operator-system
 ```
 **3.** Creating  `CrunchyBridgeInventory` Custom Resource
 
