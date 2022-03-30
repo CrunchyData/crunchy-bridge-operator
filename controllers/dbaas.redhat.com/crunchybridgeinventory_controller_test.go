@@ -123,6 +123,9 @@ func createSecret(namespace string) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: credentialsRefName + "-",
 			Namespace:    namespace,
+			Labels: map[string]string{
+				dbaasv1alpha1.TypeLabelKey: dbaasv1alpha1.TypeLabelValue,
+			},
 		},
 		Data: map[string][]byte{
 			KEYFIELDNAME:    []byte(publicApiKey),

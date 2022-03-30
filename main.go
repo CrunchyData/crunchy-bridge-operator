@@ -30,12 +30,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
 	crunchybridgecontrollers "github.com/CrunchyData/crunchy-bridge-operator/controllers/crunchybridge"
@@ -60,12 +60,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-type mainConfig struct {
-	apiURL    string
-	clientset *kubernetes.Clientset
-}
-
-var dbaasInit func(ctrl.Manager, mainConfig)
+var dbaasInit func(manager.Options, string) manager.Manager
 
 func main() {
 	// Variables from boilerplate
@@ -116,7 +111,15 @@ func main() {
 		}
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	crunchybridgeAPIURL = strings.TrimRight(crunchybridgeAPIURL, "/")
+
+	apiURL, err := url.Parse(crunchybridgeAPIURL)
+	if err != nil {
+		setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
+		os.Exit(1)
+	}
+
+	mgrOpts := manager.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
@@ -124,24 +127,16 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0b67260c.crunchydata.com",
 		SyncPeriod:             &syncPeriod,
-	})
+	}
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	cfg := mgr.GetConfig()
-	clientset, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		setupLog.Error(err, "unable to create clientset")
-		os.Exit(1)
-	}
 
-	crunchybridgeAPIURL = strings.TrimRight(crunchybridgeAPIURL, "/")
-
-	apiURL, err := url.Parse(crunchybridgeAPIURL)
-	if err != nil {
-		setupLog.Error(err, "error parsing API URL", "URL", crunchybridgeAPIURL)
-		os.Exit(1)
+	// Set up manager with DBaaS controllers if built with option
+	if dbaasInit != nil {
+		mgr = dbaasInit(mgrOpts, crunchybridgeAPIURL)
 	}
 
 	// Create client directly for querying non-managed object
@@ -168,14 +163,6 @@ func main() {
 	if err != nil {
 		setupLog.Info("unable to configure Crunchy Bridge API client for crunchybridge controllers, disabling")
 		runBridgeControllers = false
-	}
-
-	// Set up manager with DBaaS controllers if built with option
-	if dbaasInit != nil {
-		dbaasInit(mgr, mainConfig{
-			apiURL:    crunchybridgeAPIURL,
-			clientset: clientset,
-		})
 	}
 
 	if runBridgeControllers {
