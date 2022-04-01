@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ptr "k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
@@ -54,23 +55,26 @@ func (r *CrunchyBridgeConnectionReconciler) connectionDetails(instanceID string,
 		logger.Error(err, "Error in getting the connectionRole")
 		return err
 	}
-	secret := getOwnedSecret(connection, connectionRole.Name, connectionRole.Password)
-	secretCreated, err := r.Clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
-	if err != nil {
-		logger.Error(err, "Error in creating the secret")
-		return err
+
+	if connection.Status.CredentialsRef == nil {
+		secret := getOwnedSecret(connection, connectionRole.Name, connectionRole.Password)
+		err := r.Client.Create(context.Background(), secret, &client.CreateOptions{})
+		if err != nil {
+			logger.Error(err, "Error in creating the secret")
+			return err
+		}
+		connection.Status.CredentialsRef = &corev1.LocalObjectReference{Name: secret.Name}
 	}
+	if connection.Status.ConnectionInfoRef == nil {
+		configMap := getOwnedConfigMap(connection, connectionRole.URI)
+		configMapCreated, err := r.Clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
+		if err != nil {
+			logger.Error(err, "Error in creating the configMap")
+			return err
+		}
 
-	configMap := getOwnedConfigMap(connection, connectionRole.URI)
-	configMapCreated, err := r.Clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
-	if err != nil {
-		logger.Error(err, "Error in creating the configMap")
-		return err
+		connection.Status.ConnectionInfoRef = &corev1.LocalObjectReference{Name: configMapCreated.Name}
 	}
-
-	connection.Status.CredentialsRef = &corev1.LocalObjectReference{Name: secretCreated.Name}
-	connection.Status.ConnectionInfoRef = &corev1.LocalObjectReference{Name: configMapCreated.Name}
-
 	return nil
 
 }
