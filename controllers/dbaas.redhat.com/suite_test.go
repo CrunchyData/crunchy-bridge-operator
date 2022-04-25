@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	dbaasoperator "github.com/RHEcosystemAppEng/dbaas-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +91,7 @@ var _ = BeforeSuite(func() {
 	err = dbaasredhatcomv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = dbaasoperator.AddToScheme(scheme.Scheme)
+	err = dbaasv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = apiextv1.AddToScheme(scheme.Scheme)

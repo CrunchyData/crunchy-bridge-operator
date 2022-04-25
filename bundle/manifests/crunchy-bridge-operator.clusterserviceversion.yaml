@@ -136,11 +136,8 @@ spec:
           resources:
           - deployments
           verbs:
-          - create
-          - delete
           - get
           - list
-          - update
           - watch
         - apiGroups:
           - crunchybridge.crunchydata.com
