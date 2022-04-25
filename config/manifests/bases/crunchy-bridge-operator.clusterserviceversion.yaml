@@ -60,4 +60,5 @@ spec:
   provider:
     name: Crunchy Data
     url: https://www.crunchydata.com
+  replaces: crunchy-bridge-operator.v0.0.2
   version: 0.0.0
