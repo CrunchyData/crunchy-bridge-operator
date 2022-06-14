@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/example.org/crunchy-bridge-operator
-  newTag: v0.0.4-dev
+  newTag: v0.0.5-dev
