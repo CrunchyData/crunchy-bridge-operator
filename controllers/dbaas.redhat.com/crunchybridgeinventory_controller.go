@@ -111,7 +111,7 @@ func setupClient(client client.Client, inventory dbaasredhatcomv1alpha1.CrunchyB
 	}
 	kubeSecretProvider := &kubeadapter.KubeSecretCredentialProvider{
 		Client:      client,
-		Namespace:   inventory.Spec.CredentialsRef.Namespace,
+		Namespace:   inventory.Namespace,
 		Name:        inventory.Spec.CredentialsRef.Name,
 		KeyField:    KEYFIELDNAME,
 		SecretField: SECRETFIELDNAME,

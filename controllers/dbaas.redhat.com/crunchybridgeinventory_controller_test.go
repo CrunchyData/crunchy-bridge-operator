@@ -98,9 +98,8 @@ func createInventories(inventoryName string) *v1alpha1.CrunchyBridgeInventory {
 	credentialSecret := createSecret(testNamespace)
 
 	DBaaSInventorySpec := &dbaasv1alpha1.DBaaSInventorySpec{
-		CredentialsRef: &dbaasv1alpha1.NamespacedName{
-			Name:      credentialSecret.Name,
-			Namespace: testNamespace,
+		CredentialsRef: &dbaasv1alpha1.LocalObjectReference{
+			Name: credentialSecret.Name,
 		},
 	}
 	inventory := &v1alpha1.CrunchyBridgeInventory{
