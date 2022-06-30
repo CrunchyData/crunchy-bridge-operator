@@ -83,10 +83,10 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    olm.skipRange: '>=0.0.2 <0.0.4'
+    olm.skipRange: '>=0.0.2 <0.0.5'
     operators.operatorframework.io/builder: operator-sdk-v1.9.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: crunchy-bridge-operator.v0.0.4-dev
+  name: crunchy-bridge-operator.v0.0.5-dev
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -341,7 +341,7 @@ spec:
                       fieldPath: metadata.namespace
                 - name: SYNC_PERIOD_MIN
                   value: "180"
-                image: quay.io/example.org/crunchy-bridge-operator:v0.0.4-dev
+                image: quay.io/example.org/crunchy-bridge-operator:v0.0.5-dev
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -430,4 +430,4 @@ spec:
   provider:
     name: Crunchy Data
     url: https://www.crunchydata.com
-  version: 0.0.4-dev
+  version: 0.0.5-dev
