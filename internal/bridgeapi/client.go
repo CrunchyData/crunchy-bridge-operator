@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
+	// "github.com/google/uuid"
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 )
 
 var (
-	BridgeOperatorNS = uuid.MustParse("b208adb0-ca76-40f7-ab28-8a505730bd25")
+// BridgeOperatorNS = uuid.MustParse("b208adb0-ca76-40f7-ab28-8a505730bd25")
 )
 
 type ClientOption func(*Client)
@@ -152,12 +152,17 @@ func (c *Client) CreateCluster(cr CreateRequest) error {
 		return err
 	}
 	c.setCommonHeaders(req)
-	// Set Idempotency Key based on payload content
+	// Disable Idempotency Key setting - futher evaluation is ongoing w.r.t.
+	// use of the Idempotency-Key header as there are request fields that
+	// guarantee idempotent requests.
 	//
-	// API is expecting UUID for the value, but we're using UUIDv5 so that
-	// the key matches the request payload
-	idemKey := uuid.NewSHA1(BridgeOperatorNS, reqPayload)
-	req.Header.Set("Idempotency-Key", idemKey.String())
+	// // Set Idempotency Key based on payload content
+	// //
+	// // API is expecting UUID for the value, but we're using UUIDv5 so that
+	// // the key matches the request payload
+	// idemKey := uuid.NewSHA1(BridgeOperatorNS, reqPayload)
+	// req.Header.Set("Idempotency-Key", idemKey.String())
+	//
 
 	resp, err := c.client.Do(req)
 	if err != nil {
