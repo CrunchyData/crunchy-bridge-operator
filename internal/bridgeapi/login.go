@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,6 +119,26 @@ func (lm *loginManager) login() {
 		// depending on "eventual consistency" usage
 		lm.log.Info("provided credentials currently blank")
 		lm.setNextLogin(lm.retryDelay.Duration(), lm.login)
+		return
+	}
+
+	// Short-circuit token exchange if using new token version
+	if strings.HasPrefix(creds.Secret, "cbkey_") {
+		// With the new key format, only the secret is relevant and can be used directly as a bearer token
+
+		// It may be worthwhile here to call the API to confirm the credential since that side effect
+		// no longer occurs with the newer token method - while technically correct in that an active
+		// token has been obtained (because it's now provided), it may be misleading to users.
+		lm.Lock()
+		lm.activeToken = creds.Secret
+		lm.activeTokenID = ""
+		lm.curState = LoginActive
+		lm.retryDelay.Reset()
+		lm.Unlock()
+
+		// Refresh from credential store in 10 min
+		lm.setExpiration(600)
+		lm.setNextLogin(600*time.Second, lm.refreshLogin)
 		return
 	}
 
