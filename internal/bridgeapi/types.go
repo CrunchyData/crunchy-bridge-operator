@@ -117,6 +117,11 @@ type ConnectionRole struct {
 	URI      string `json:"uri"`
 }
 
+type Account struct {
+	ID            string `json:"id"`
+	DefaultTeamID string `json:"default_team_id"`
+}
+
 type tokenResponse struct {
 	ExpiresIn int64  `json:"expires_in"`
 	Token     string `json:"access_token"`

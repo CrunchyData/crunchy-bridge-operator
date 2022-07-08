@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	routeAccount     string = "/account"
 	routeClusters    string = "/clusters"
 	routeDefaultRole string = "/clusters/%s/roles/postgres"
 	routeTeams       string = "/teams"
@@ -446,47 +447,41 @@ func (c *Client) DeleteCluster(id string) error {
 }
 
 // DefaultTeamID returns the team id for creation requests
-//   currently retrieves personal team id, future change for configured default
 func (c *Client) DefaultTeamID() (string, error) {
 	if err := c.precheck(); err != nil {
 		return "", err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeTeams, nil)
+	req, err := http.NewRequest(http.MethodGet, c.apiTarget.String()+routeAccount, nil)
 	if err != nil {
-		c.log.Error(err, "during list teams prep")
+		c.log.Error(err, "during fetch account prep")
 		return "", err
 	}
 	c.setCommonHeaders(req)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.log.Error(err, "during list teams")
+		c.log.Error(err, "during fetch account")
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		c.log.Info("unexpected status code from API (team list)", "statusCode", resp.StatusCode)
+		c.log.Info("unexpected status code from API (account info)", "statusCode", resp.StatusCode)
 		return "", errors.New("unexpected response status from API")
 	}
 
-	var teamList struct {
-		Teams []struct {
-			ID         string `json:"id"`
-			IsPersonal bool   `json:"is_personal"`
-		}
-	}
-	err = json.NewDecoder(resp.Body).Decode(&teamList)
-	if err != nil && teamList.Teams != nil {
-		c.log.Error(err, "error unmarshaling response body for team list")
+	var account Account
+	err = json.NewDecoder(resp.Body).Decode(&account)
+	if err != nil {
+		c.log.Error(err, "error unmarshaling response body for account")
 		return "", err
 	}
 
-	for _, team := range teamList.Teams {
-		if team.IsPersonal {
-			return team.ID, nil
-		}
+	if account.DefaultTeamID == "" {
+		// Perssonal Team ID matches account ID
+		return account.ID, nil
+	} else {
+		return account.DefaultTeamID, nil
 	}
-	return "", errors.New("unable to identify personal team")
 }
