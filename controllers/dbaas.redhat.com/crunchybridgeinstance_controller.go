@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	crunchybridgev1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/crunchybridge/v1alpha1"
 	dbaasredhatcomv1alpha1 "github.com/CrunchyData/crunchy-bridge-operator/apis/dbaas.redhat.com/v1alpha1"
 	"github.com/CrunchyData/crunchy-bridge-operator/internal/bridgeapi"
 )
@@ -105,7 +104,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		if listContains(instanceObj.Finalizers, instanceFinalizer) {
 			if id := instanceObj.Status.InstanceID; id != "" {
 				logger.Info("deleting cluster", "id", id)
-				instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseDeleting
+				instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseDeleting
 				if err := r.Status().Update(ctx, instanceObj); err != nil {
 					if apierrors.IsConflict(err) {
 						logger.Info("Instance modified, retry reconciling")
@@ -131,7 +130,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 	} else {
 		switch instanceObj.Status.Phase {
-		case crunchybridgev1alpha1.PhaseUnknown:
+		case dbaasredhatcomv1alpha1.PhaseBlank, dbaasredhatcomv1alpha1.PhaseUnknown:
 			// New object, add our finalizer
 			if !listContains(instanceObj.Finalizers, instanceFinalizer) {
 				controllerutil.AddFinalizer(instanceObj, instanceFinalizer)
@@ -143,12 +142,12 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 			// Set pending phase after so any errors in setting finalizer
 			// don't advance state
-			instanceObj.Status.Phase = crunchybridgev1alpha1.PhasePending
+			instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhasePending
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-		case crunchybridgev1alpha1.PhasePending:
+		case dbaasredhatcomv1alpha1.PhasePending:
 			req, err := r.createFromSpec(instanceObj.Spec, bridgeapiClient)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -166,12 +165,12 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 
 			// Assuming the request was sent, update phase
-			instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseCreating
+			instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseCreating
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-		case crunchybridgev1alpha1.PhaseCreating:
+		case dbaasredhatcomv1alpha1.PhaseCreating:
 			var detC bridgeapi.ClusterDetail
 			if cid := instanceObj.Status.InstanceID; cid == "" {
 				c, err := bridgeapiClient.ClusterByName(instanceObj.Spec.Name)
@@ -198,7 +197,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 
 			if readyNow := (detC.State == string(bridgeapi.StateReady)); readyNow {
-				instanceObj.Status.Phase = crunchybridgev1alpha1.PhaseReady
+				instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseReady
 				statusErr := r.updateStatus(instanceObj, metav1.ConditionTrue, Ready, InstanceSuccessMessage)
 				if statusErr != nil {
 					logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
@@ -212,7 +211,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 			return ctrl.Result{Requeue: true, RequeueAfter: WatchInt}, nil
 
-		case crunchybridgev1alpha1.PhaseReady:
+		case dbaasredhatcomv1alpha1.PhaseReady:
 			// TODO: Monitor changes, change state machine (phoenix)
 
 		default:
