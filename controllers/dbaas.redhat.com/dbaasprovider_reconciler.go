@@ -55,8 +55,10 @@ const (
 	MEDIATYPE              = "image/png"
 	KEYFIELDNAME           = "publicApiKey"
 	KEYFIELDDISPLAYNAME    = "Public API Key"
+	KEYFIELDHELPTEXT       = "The Public API Key is the Application ID value associated with your Crunchy Bridge Cloud account."
 	SECRETFIELDNAME        = "privateApiSecret"
 	SECRETFIELDDISPLAYNAME = "Private API Secret"
+	SECRETFIELDHELPTEXT    = "The Private API Secret is the Application Secret associated with your Crunchy Bridge Cloud account."
 	RELATEDTOLABELNAME     = "related-to"
 	RELATEDTOLABELVALUE    = "dbaas-operator"
 	TYPELABELNAME          = "type"
@@ -197,12 +199,14 @@ func bridgeProviderCR(clusterRoleList *rbac.ClusterRoleList) *dbaasoperator.DBaa
 					DisplayName: KEYFIELDDISPLAYNAME,
 					Type:        "string",
 					Required:    true,
+					HelpText:    KEYFIELDHELPTEXT,
 				},
 				{
 					Key:         SECRETFIELDNAME,
 					DisplayName: SECRETFIELDDISPLAYNAME,
 					Type:        "maskedstring",
 					Required:    true,
+					HelpText:    SECRETFIELDHELPTEXT,
 				},
 			},
 			AllowsFreeTrial:              true,

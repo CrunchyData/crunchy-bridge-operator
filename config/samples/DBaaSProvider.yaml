@@ -20,7 +20,9 @@ spec:
       displayName: Public API Key
       type: string
       required: true
+      helpText: The Public API Key is the Application ID value associated with your Crunchy Bridge Cloud account.
     - key: privateApiSecret
       displayName: Private API Secret
       type: maskedstring
       required: true
+      helpText: The Private API Secret is the Application Secret associated with your Crunchy Bridge Cloud account.
