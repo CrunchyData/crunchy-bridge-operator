@@ -40,6 +40,8 @@ import (
 const (
 	instanceFinalizer = "dbaas.redhat.com/crunchybridgeinstance-finalizer"
 	WatchInt          = 10 * time.Second
+
+	PhaseBlank = ""
 )
 
 // CrunchyBridgeInstanceReconciler reconciles a CrunchyBridgeInstance object
@@ -104,7 +106,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		if listContains(instanceObj.Finalizers, instanceFinalizer) {
 			if id := instanceObj.Status.InstanceID; id != "" {
 				logger.Info("deleting cluster", "id", id)
-				instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseDeleting
+				instanceObj.Status.Phase = dbaasv1alpha1.InstancePhaseDeleting
 				if err := r.Status().Update(ctx, instanceObj); err != nil {
 					if apierrors.IsConflict(err) {
 						logger.Info("Instance modified, retry reconciling")
@@ -130,7 +132,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 	} else {
 		switch instanceObj.Status.Phase {
-		case dbaasredhatcomv1alpha1.PhaseBlank, dbaasredhatcomv1alpha1.PhaseUnknown:
+		case PhaseBlank, dbaasv1alpha1.InstancePhaseUnknown:
 			// New object, add our finalizer
 			if !listContains(instanceObj.Finalizers, instanceFinalizer) {
 				controllerutil.AddFinalizer(instanceObj, instanceFinalizer)
@@ -142,12 +144,12 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 			// Set pending phase after so any errors in setting finalizer
 			// don't advance state
-			instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhasePending
+			instanceObj.Status.Phase = dbaasv1alpha1.InstancePhasePending
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-		case dbaasredhatcomv1alpha1.PhasePending:
+		case dbaasv1alpha1.InstancePhasePending:
 			req, err := r.createFromSpec(instanceObj.Spec, bridgeapiClient)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -165,12 +167,12 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 
 			// Assuming the request was sent, update phase
-			instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseCreating
+			instanceObj.Status.Phase = dbaasv1alpha1.InstancePhaseCreating
 			if err := r.Status().Update(ctx, instanceObj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-		case dbaasredhatcomv1alpha1.PhaseCreating:
+		case dbaasv1alpha1.InstancePhaseCreating:
 			var detC bridgeapi.ClusterDetail
 			if cid := instanceObj.Status.InstanceID; cid == "" {
 				c, err := bridgeapiClient.ClusterByName(instanceObj.Spec.Name)
@@ -197,7 +199,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 
 			if readyNow := (detC.State == string(bridgeapi.StateReady)); readyNow {
-				instanceObj.Status.Phase = dbaasredhatcomv1alpha1.PhaseReady
+				instanceObj.Status.Phase = dbaasv1alpha1.InstancePhaseReady
 				statusErr := r.updateStatus(instanceObj, metav1.ConditionTrue, Ready, InstanceSuccessMessage)
 				if statusErr != nil {
 					logger.Error(statusErr, "Error in updating CrunchyBridgeInstance status")
@@ -211,7 +213,7 @@ func (r *CrunchyBridgeInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			}
 			return ctrl.Result{Requeue: true, RequeueAfter: WatchInt}, nil
 
-		case dbaasredhatcomv1alpha1.PhaseReady:
+		case dbaasv1alpha1.InstancePhaseReady:
 			// TODO: Monitor changes, change state machine (phoenix)
 
 		default:
