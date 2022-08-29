@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    olm.skipRange: '>=0.0.2 <0.0.5'
+    olm.skipRange: '>=0.0.2 <0.0.6'
   name: crunchy-bridge-operator.v0.0.0
   namespace: placeholder
 spec:
