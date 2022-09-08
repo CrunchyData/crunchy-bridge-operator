@@ -17,6 +17,7 @@ package dbaasredhatcom
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"strings"
@@ -38,15 +39,17 @@ const (
 	PORTKEYNAME         string = "port"
 	DBKEYNAME           string = "database"
 	TYPEKEYNAME         string = "type"
+	USERNAMEKEYNAME     string = "username"
+	PASSWORDKEYNAME     string = "password"
 	DATABASESERVICETYPE string = "postgresql"
-	PROVIDERVALUE              = "Red Hat DBaaS / Crunchy Bridge"
+	PROVIDERVALUE              = "rhoda/crunchy bridge"
 	PROVIDERKEY                = "provider"
 )
 
 // connectionDetails
 func (r *CrunchyBridgeConnectionReconciler) connectionDetails(instanceID string, connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, bridgeapi *bridgeapi.Client, req ctrl.Request, logger logr.Logger) error {
 
-	if r.isBindingExist(connection) {
+	if r.isBindingExist(connection) && connection.Status.Binding != nil {
 		return nil
 	}
 
@@ -57,31 +60,21 @@ func (r *CrunchyBridgeConnectionReconciler) connectionDetails(instanceID string,
 		return err
 	}
 
-	if connection.Status.CredentialsRef == nil {
-		secret := getOwnedSecret(connection, connectionRole.Name, connectionRole.Password)
+	if connection.Status.Binding == nil {
+		secret := getOwnedSecret(connection, connectionRole.URI, connectionRole.Name, connectionRole.Password)
 		err := r.Client.Create(context.Background(), secret, &client.CreateOptions{})
 		if err != nil {
 			logger.Error(err, "Error in creating the secret")
 			return err
 		}
-		connection.Status.CredentialsRef = &corev1.LocalObjectReference{Name: secret.Name}
-	}
-	if connection.Status.ConnectionInfoRef == nil {
-		configMap := getOwnedConfigMap(connection, connectionRole.URI)
-		configMapCreated, err := r.Clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
-		if err != nil {
-			logger.Error(err, "Error in creating the configMap")
-			return err
-		}
-
-		connection.Status.ConnectionInfoRef = &corev1.LocalObjectReference{Name: configMapCreated.Name}
+		connection.Status.Binding = &corev1.LocalObjectReference{Name: secret.Name}
 	}
 	return nil
 
 }
 
 // getOwnedSecret returns a secret object for database credentials with ownership set
-func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, username, password string) *corev1.Secret {
+func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, connectionString, username, password string) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind: "Opaque",
@@ -107,58 +100,26 @@ func getOwnedSecret(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, 
 				},
 			},
 		},
-		Data: map[string][]byte{
-			"username": []byte(username),
-			"password": []byte(password),
-		},
+		Type: corev1.SecretType(fmt.Sprintf("servicebinding.io/%s", DATABASESERVICETYPE)),
+		Data: connectionSecretData(connectionString, username, password),
 	}
 }
 
-// getOwnedConfigMap returns a configmap object for database name, host , port with ownership set
-func getOwnedConfigMap(connection *dbaasredhatcomv1alpha1.CrunchyBridgeConnection, connectionString string) *corev1.ConfigMap {
-
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "crunchy-bridge-db-conn-cm-",
-			Namespace:    connection.Namespace,
-			Labels: map[string]string{
-				"managed-by":      "crunchy-bridge-operator",
-				"owner":           connection.Name,
-				"owner.kind":      connection.Kind,
-				"owner.namespace": connection.Namespace,
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					UID:                connection.GetUID(),
-					APIVersion:         connection.APIVersion,
-					BlockOwnerDeletion: ptr.BoolPtr(false),
-					Controller:         ptr.BoolPtr(true),
-					Kind:               connection.Kind,
-					Name:               connection.Name,
-				},
-			},
-		},
-		Data: connectionCMData(connectionString),
-	}
-}
-
-// connectionCMData
-func connectionCMData(connectionString string) map[string]string {
-	bindingParamsMap := make(map[string]string)
+// connectionSecretData
+func connectionSecretData(connectionString, username, password string) map[string][]byte {
+	bindingParamsMap := make(map[string][]byte)
 	u, err := url.Parse(connectionString)
 	if err != nil {
 		return bindingParamsMap
 	}
 	host, port, _ := net.SplitHostPort(u.Host)
-	bindingParamsMap[TYPEKEYNAME] = DATABASESERVICETYPE
-	bindingParamsMap[PROVIDERKEY] = PROVIDERVALUE
-	bindingParamsMap[HOSTKEYNAME] = host
-	bindingParamsMap[PORTKEYNAME] = port
-	bindingParamsMap[DBKEYNAME] = strings.TrimLeft(u.Path, "/")
+	bindingParamsMap[TYPEKEYNAME] = []byte(DATABASESERVICETYPE)
+	bindingParamsMap[PROVIDERKEY] = []byte(PROVIDERVALUE)
+	bindingParamsMap[HOSTKEYNAME] = []byte(host)
+	bindingParamsMap[PORTKEYNAME] = []byte(port)
+	bindingParamsMap[DBKEYNAME] = []byte(strings.TrimLeft(u.Path, "/"))
+	bindingParamsMap[USERNAMEKEYNAME] = []byte(username)
+	bindingParamsMap[PASSWORDKEYNAME] = []byte(password)
 	return bindingParamsMap
 
 }
